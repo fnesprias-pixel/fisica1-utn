@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resultado — Física I UTN</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#003087" />
+  <script src="js/mathjax-init.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
+</head>
+<body class="pagina-resultado">
+
+  <div class="resultado-card">
+    <h2 class="resultado-titulo">Resultado del quiz</h2>
+
+    <p id="resultado-puntaje" class="resultado-puntaje">…</p>
+
+    <div id="resultado-lista" class="resultado-lista"></div>
+
+    <div class="resultado-acciones">
+      <a id="btn-volver" href="estudiante.html" class="btn-secundario">← Volver al panel</a>
+      <button id="btn-reintentar" class="btn-primario" style="width:auto;">Reintentar quiz</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+
+    (async () => {
+      // Verificar sesión sin restricción de rol
+      const session = await verificarSesion();
+      if (!session) return;
+
+      const params = new URLSearchParams(window.location.search);
+      const unidadId = params.get('unidad_id');
+
+      // Botón reintentar
+      document.getElementById('btn-reintentar').addEventListener('click', () => {
+        window.location.href = `/quiz.html?unidad_id=${unidadId}`;
+      });
+
+      // Leer resultados guardados por quiz.js
+      const resultados = JSON.parse(sessionStorage.getItem('quiz_resultados') || '[]');
+
+      if (!resultados.length) {
+        document.getElementById('resultado-puntaje').textContent = 'Sin datos de quiz.';
+        return;
+      }
+
+      const correctas = resultados.filter(r => r.esCorrecta).length;
+      const total = resultados.length;
+
+      document.getElementById('resultado-puntaje').textContent =
+        `Respondiste correctamente ${correctas} de ${total} preguntas`;
+
+      const lista = document.getElementById('resultado-lista');
+
+      resultados.forEach((r, idx) => {
+        const div = document.createElement('div');
+        div.className = `resultado-item ${r.esCorrecta ? 'correcto' : 'incorrecto'}`;
+        div.innerHTML = `
+          <p class="etiqueta">${r.esCorrecta ? '✓ Correcto' : '✗ Incorrecto'}</p>
+          <p><strong>${idx + 1}. ${r.pregunta}</strong></p>
+          <p>Tu respuesta: <em>${r.respuestaDada}</em></p>
+          ${!r.esCorrecta ? `<p>Respuesta correcta: <em>${r.respuestaCorrecta}</em></p>` : ''}
+        `;
+        lista.appendChild(div);
+      });
+
+      // Renderizar LaTeX en los resultados
+      await MathJax.typesetPromise([lista]);
+
+      // Limpiar sessionStorage
+      sessionStorage.removeItem('quiz_resultados');
+    })();
+  </script>
+</body>
+</html>

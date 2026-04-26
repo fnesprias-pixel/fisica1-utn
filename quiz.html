@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz — Física I UTN</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#003087" />
+  <script src="js/mathjax-init.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
+</head>
+<body class="pagina-quiz">
+
+  <header class="quiz-header">
+    <div style="font-weight:700;">Física I — Quiz</div>
+    <span class="quiz-progreso-texto">
+      Pregunta <span id="quiz-actual">1</span> de <span id="quiz-total">—</span>
+    </span>
+  </header>
+
+  <div class="quiz-contenedor">
+    <div id="quiz-pregunta-card" class="quiz-pregunta-card">
+      <p class="cargando">Cargando preguntas…</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/quiz.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>

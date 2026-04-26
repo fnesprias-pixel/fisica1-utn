@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel del estudiante — Física I UTN</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#003087" />
+  <script src="js/mathjax-init.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
+</head>
+<body class="layout-app">
+
+  <header class="header-app">
+    <div class="marca">
+      <div class="logo-mini">F1</div>
+      Física I — UTN FRBA
+    </div>
+    <div class="acciones">
+      <span class="nombre-usuario" id="nombre-usuario"></span>
+      <button class="btn-secundario" id="btn-cambiar-pass" style="color:#fff;border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);">
+        Cambiar contraseña
+      </button>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </header>
+
+  <main class="contenido-principal">
+    <h2 style="margin-bottom:1.25rem;">Unidades</h2>
+    <div id="lista-unidades" class="lista-unidades">
+      <p class="cargando">Cargando unidades…</p>
+    </div>
+  </main>
+
+  <!-- Modal cambio de contraseña -->
+  <div id="modal-contrasena" class="modal-overlay" hidden>
+    <div class="modal-caja">
+      <h3 class="modal-titulo">Cambiar contraseña</h3>
+
+      <div id="error-pass" class="mensaje-error" hidden></div>
+      <div id="exito-pass" class="mensaje-exito" hidden>Contraseña actualizada correctamente.</div>
+
+      <div class="campo">
+        <label for="nueva-pass">Nueva contraseña</label>
+        <input type="password" id="nueva-pass" placeholder="Mínimo 6 caracteres" />
+      </div>
+      <div class="campo">
+        <label for="confirmar-pass">Confirmar contraseña</label>
+        <input type="password" id="confirmar-pass" placeholder="Repetí la contraseña" />
+      </div>
+
+      <div class="modal-acciones">
+        <button class="btn-secundario" id="btn-cancelar-pass">Cancelar</button>
+        <button class="btn-primario" id="btn-guardar-pass" style="width:auto;">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/estudiante.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>

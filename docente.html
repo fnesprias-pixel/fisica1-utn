@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel del docente — Física I UTN</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#003087" />
+  <script src="js/mathjax-init.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
+</head>
+<body class="layout-app">
+
+  <header class="header-app">
+    <div class="marca">
+      <div class="logo-mini">F1</div>
+      Física I — UTN FRBA
+    </div>
+    <div class="acciones">
+      <span class="nombre-usuario" id="nombre-usuario"></span>
+      <span class="badge badge-azul" style="background:rgba(255,255,255,0.2);color:#fff;">Docente</span>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </header>
+
+  <main class="contenido-principal">
+
+    <!-- Tabs de navegación -->
+    <nav class="tabs-nav">
+      <button class="tab-btn activo" data-tab="tab-contenido">Contenido</button>
+      <button class="tab-btn" data-tab="tab-quizzes">Quizzes</button>
+      <button class="tab-btn" data-tab="tab-alumnos">Alumnos</button>
+    </nav>
+
+    <!-- ===== TAB 1: CONTENIDO ===== -->
+    <section id="tab-contenido" class="tab-panel activo">
+      <h2 style="margin-bottom:1.25rem;">Gestión de contenido</h2>
+
+      <div style="background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.5rem;margin-bottom:1.5rem;">
+        <h3 style="margin-bottom:1rem;">Agregar contenido</h3>
+
+        <form id="form-contenido">
+          <div class="campo">
+            <label for="sel-unidad-contenido">Unidad</label>
+            <select id="sel-unidad-contenido" class="select-unidad" required>
+              <option value="">— Seleccioná una unidad —</option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="cont-tipo">Tipo</label>
+            <select id="cont-tipo" required>
+              <option value="teoria">Teoría</option>
+              <option value="ejercicio">Ejercicio resuelto</option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="cont-titulo">Título</label>
+            <input type="text" id="cont-titulo" placeholder="Ej: Velocidad media en MRU" required />
+          </div>
+
+          <div class="campo">
+            <label for="cont-cuerpo">Cuerpo (HTML + LaTeX)</label>
+            <textarea id="cont-cuerpo" placeholder="Podés usar HTML y fórmulas LaTeX con \( … \) o \[ … \]" required></textarea>
+          </div>
+
+          <div class="campo">
+            <label>Vista previa</label>
+            <div id="preview-cuerpo" class="preview-mathjax"></div>
+          </div>
+
+          <button type="submit" class="btn-primario">Agregar contenido</button>
+        </form>
+      </div>
+
+      <div style="background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.5rem;">
+        <h3 style="margin-bottom:1rem;">Contenido existente</h3>
+        <div id="lista-contenido-docente">
+          <p class="sin-datos">Seleccioná una unidad para ver su contenido.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAB 2: QUIZZES ===== -->
+    <section id="tab-quizzes" class="tab-panel">
+      <h2 style="margin-bottom:1.25rem;">Gestión de quizzes</h2>
+
+      <div style="background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.5rem;margin-bottom:1.5rem;">
+        <h3 style="margin-bottom:1rem;">Agregar pregunta</h3>
+
+        <form id="form-quiz">
+          <div class="campo">
+            <label for="sel-unidad-quiz">Unidad</label>
+            <select id="sel-unidad-quiz" class="select-unidad" required>
+              <option value="">— Seleccioná una unidad —</option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="quiz-pregunta">Enunciado</label>
+            <textarea id="quiz-pregunta" placeholder="Podés usar LaTeX en el enunciado" style="min-height:80px;" required></textarea>
+          </div>
+
+          <div class="campo">
+            <label for="quiz-tipo">Tipo de pregunta</label>
+            <select id="quiz-tipo" required>
+              <option value="multiple">Opción múltiple</option>
+              <option value="verdadero_falso">Verdadero / Falso</option>
+              <option value="numerico">Numérico</option>
+            </select>
+          </div>
+
+          <!-- Opciones para tipo múltiple -->
+          <div id="campos-multiple">
+            <div class="campo">
+              <label>Opciones (ingresá las 4)</label>
+              <input type="text" id="op-a" placeholder="Opción A" style="margin-bottom:0.4rem;" />
+              <input type="text" id="op-b" placeholder="Opción B" style="margin-bottom:0.4rem;" />
+              <input type="text" id="op-c" placeholder="Opción C" style="margin-bottom:0.4rem;" />
+              <input type="text" id="op-d" placeholder="Opción D" />
+            </div>
+          </div>
+
+          <div class="campo">
+            <label for="quiz-respuesta">Respuesta correcta</label>
+            <input
+              type="text"
+              id="quiz-respuesta"
+              placeholder="Para múltiple: texto exacto de la opción. Para numérico: el valor. Para V/F: Verdadero o Falso."
+              required
+            />
+          </div>
+
+          <div class="campo">
+            <label for="quiz-explicacion">Explicación (opcional)</label>
+            <textarea id="quiz-explicacion" placeholder="Explicación que se muestra tras responder" style="min-height:70px;"></textarea>
+          </div>
+
+          <button type="submit" class="btn-primario">Agregar pregunta</button>
+        </form>
+      </div>
+
+      <div style="background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.5rem;">
+        <h3 style="margin-bottom:1rem;">Preguntas existentes</h3>
+        <div id="lista-quiz-docente">
+          <p class="sin-datos">Seleccioná una unidad para ver sus preguntas.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAB 3: ALUMNOS ===== -->
+    <section id="tab-alumnos" class="tab-panel">
+      <h2 style="margin-bottom:1.25rem;">Alumnos</h2>
+
+      <div style="background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.5rem;">
+        <div class="tabla-wrap">
+          <table class="tabla-alumnos">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Legajo</th>
+                <th>Vistas</th>
+                <th>Promedio quiz</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-alumnos">
+              <tr><td colspan="5" class="cargando">Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detalle de alumno seleccionado -->
+      <div id="detalle-alumno" class="detalle-alumno" hidden></div>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/docente.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>

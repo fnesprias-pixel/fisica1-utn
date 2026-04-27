@@ -96,6 +96,51 @@
       }
     }
 
+    // Muestra el error y restaura el botón
+    function mostrarError(mensaje) {
+      errorLogin.textContent = mensaje;
+      errorLogin.hidden = false;
+      btnIngresar.textContent = 'Ingresar';
+      btnIngresar.disabled = false;
+    }
+
+    // Flujo correcto de login
+    async function iniciarSesion(email, password) {
+      try {
+        // 1. Autenticar con Supabase Auth
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        const userId = data.user.id;
+
+        // 2. Esperar brevemente a que la sesión se propague
+        await new Promise(r => setTimeout(r, 300));
+
+        // 3. Consultar el rol del usuario en la tabla usuarios
+        const { data: perfil, error: perfilError } = await supabase
+          .from('usuarios')
+          .select('rol, nombre')
+          .eq('id', userId)
+          .single();
+
+        if (perfilError) throw perfilError;
+
+        // 4. Redirigir según el rol
+        if (perfil.rol === 'docente') {
+          window.location.href = 'docente.html';
+        } else {
+          window.location.href = 'estudiante.html';
+        }
+
+      } catch (err) {
+        mostrarError(
+          err.message?.includes('Invalid login')
+            ? 'Credenciales incorrectas. Verificá tu email y contraseña.'
+            : err.message || 'Error al iniciar sesión. Intentá de nuevo.'
+        );
+      }
+    }
+
     formLogin.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorLogin.hidden = true;
@@ -105,17 +150,7 @@
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-      if (error) {
-        errorLogin.textContent = 'Credenciales incorrectas. Verificá tu email y contraseña.';
-        errorLogin.hidden = false;
-        btnIngresar.disabled = false;
-        btnIngresar.textContent = 'Ingresar';
-        return;
-      }
-
-      await redirigirSegunRol(data.user.id);
+      await iniciarSesion(email, password);
     });
 
     linkReset.addEventListener('click', async (e) => {

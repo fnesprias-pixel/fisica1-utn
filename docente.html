@@ -7,8 +7,6 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#003087" />
-  <script src="js/mathjax-init.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
 </head>
 <body class="layout-app">
 
@@ -179,10 +177,19 @@
 
   </main>
 
+  <!-- 1. Librería Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- 2. Crea el cliente supabase -->
   <script src="js/config.js"></script>
+  <!-- 3. Funciones de autenticación y protección de rutas -->
   <script src="js/auth.js"></script>
+  <!-- 4. Configura MathJax antes de cargar su CDN -->
+  <script src="js/mathjax-init.js"></script>
+  <!-- 5. MathJax CDN (async: se descarga en paralelo, ejecuta después de mathjax-init.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
+  <!-- 6. Lógica del panel del docente -->
   <script src="js/docente.js"></script>
+  <!-- 7. Service worker -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');

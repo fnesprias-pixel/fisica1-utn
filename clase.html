@@ -3,25 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quiz — Física I UTN</title>
+  <title>Clase — Física I UTN</title>
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#003087" />
 </head>
-<body class="pagina-quiz">
+<body class="layout-app">
 
-  <header class="quiz-header">
-    <div style="font-weight:700;">Física I — Quiz</div>
-    <span class="quiz-progreso-texto">
-      Pregunta <span id="quiz-actual">1</span> de <span id="quiz-total">—</span>
-    </span>
+  <header class="header-app">
+    <div class="marca">
+      <div class="logo-mini">F1</div>
+      Física I — UTN FRBA
+    </div>
+    <div class="acciones">
+      <span class="nombre-usuario" id="nombre-usuario"></span>
+      <a href="estudiante.html" class="btn-secundario">← Volver</a>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
   </header>
 
-  <div class="quiz-contenedor">
-    <div id="quiz-pregunta-card" class="quiz-pregunta-card">
-      <p class="cargando">Cargando preguntas…</p>
+  <main class="contenido-principal">
+    <h2 id="titulo-clase">Cargando clase…</h2>
+    <div id="contenido-clase">
+      <p class="cargando">Cargando contenido…</p>
     </div>
-  </div>
+    <div id="ejercicios-clase">
+      <h3>Ejercicios Propuestos</h3>
+      <form id="form-ejercicios">
+        <p class="cargando">Cargando ejercicios…</p>
+      </form>
+      <button type="submit" form="form-ejercicios" class="btn-primario" id="btn-enviar">Enviar Respuestas</button>
+      <div id="resultado-correccion" hidden></div>
+    </div>
+  </main>
 
   <!-- 1. Librería Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -33,8 +47,8 @@
   <script src="js/mathjax-init.js"></script>
   <!-- 5. MathJax CDN (async: se descarga en paralelo, ejecuta después de mathjax-init.js) -->
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
-  <!-- 6. Lógica del quiz -->
-  <script src="js/quiz.js"></script>
+  <!-- 6. Lógica de la clase -->
+  <script src="js/clase.js"></script>
   <!-- 7. Service worker -->
   <script>
     if ('serviceWorker' in navigator) {

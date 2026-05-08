@@ -828,3 +828,86 @@ a:hover { text-decoration: underline; }
   .resultado-acciones button,
   .resultado-acciones a { width: 100%; text-align: center; }
 }
+
+/* =============================================
+   NAVEGACIÓN DE CLASES
+   ============================================= */
+
+.nav-clases {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.nav-link {
+  display: block;
+  padding: 1rem;
+  background-color: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  text-decoration: none;
+  color: var(--texto);
+  font-weight: 500;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.nav-link:hover {
+  background-color: var(--azul-fondo);
+  border-color: var(--azul);
+}
+
+/* =============================================
+   CONTENIDO DE CLASE
+   ============================================= */
+
+.contenido-teoria {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: var(--blanco);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+.contenido-teoria h4 {
+  margin-bottom: 1rem;
+  color: var(--azul);
+}
+
+.ejercicio-item {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: var(--blanco);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+.ejercicio-item h4 {
+  margin-bottom: 1rem;
+  color: var(--azul);
+}
+
+.ejercicio-item .ejercicio-cuerpo {
+  margin-bottom: 1rem;
+}
+
+.ejercicio-item label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.ejercicio-item input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  font-size: 1rem;
+}
+
+#resultado-correccion {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: var(--exito);
+  color: var(--blanco);
+  border-radius: var(--radio);
+}

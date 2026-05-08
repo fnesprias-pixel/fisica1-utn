@@ -604,11 +604,13 @@ async function crearCardEntregaDocente(entrega) {
     card.remove();
   });
 
-  card.querySelector('.btn-corregir')?.addEventListener('click', async (e) => {
+  card.querySelector('.btn-corregir')?.addEventListener('click', (e) => {
     const btn = e.currentTarget;
-    btn.disabled = true;
-    btn.textContent = 'Enviando…';
-    await iniciarCorreccion(entrega.id);
+    mostrarModalCorreccion(entrega.titulo, async ({ enunciado, respuestas }) => {
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      await iniciarCorreccion(entrega.id, enunciado, respuestas);
+    });
   });
 
   return card;
@@ -695,16 +697,50 @@ function renderVideosDocente(videos) {
   return `<div style="margin-top:0.5rem;"><strong style="font-size:0.9rem;">Videos sugeridos:</strong><ul style="margin:0.25rem 0 0 1rem;font-size:0.85rem;">${items}</ul></div>`;
 }
 
-async function iniciarCorreccion(entregaId) {
-  // Marcar como procesando de inmediato y refrescar la UI — no esperar la IA
+function mostrarModalCorreccion(tituloEntrega, onConfirmar) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+  overlay.innerHTML = `
+    <div style="background:var(--blanco);border-radius:12px;padding:1.5rem;width:100%;max-width:520px;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+      <h3 style="margin-bottom:0.25rem;">Corregir con IA</h3>
+      <p style="font-size:0.875rem;color:var(--texto-suave);margin-bottom:1.25rem;">${tituloEntrega}</p>
+      <div class="campo">
+        <label>Enunciado del/los problema/s <span style="font-weight:400;color:var(--texto-suave);">(opcional)</span></label>
+        <textarea id="modal-enunciado" rows="4" placeholder="Pegá el enunciado completo para que la IA lo use como referencia y no interprete mal el problema." style="resize:vertical;"></textarea>
+      </div>
+      <div class="campo">
+        <label>Respuestas correctas <span style="font-weight:400;color:var(--texto-suave);">(opcional)</span></label>
+        <textarea id="modal-respuestas" rows="2" placeholder="Ej: Problema 1: v = 3 m/s  |  Problema 2: F = 50 N" style="resize:vertical;"></textarea>
+      </div>
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">
+        <button class="btn-secundario btn-cancelar-modal" style="width:auto;">Cancelar</button>
+        <button class="btn-primario btn-ok-modal" style="width:auto;">Corregir</button>
+      </div>
+    </div>
+  `;
+  overlay.querySelector('.btn-cancelar-modal').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('.btn-ok-modal').addEventListener('click', () => {
+    const enunciado = overlay.querySelector('#modal-enunciado').value.trim();
+    const respuestas = overlay.querySelector('#modal-respuestas').value.trim();
+    overlay.remove();
+    onConfirmar({ enunciado: enunciado || null, respuestas: respuestas || null });
+  });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  overlay.querySelector('#modal-enunciado').focus();
+}
+
+async function iniciarCorreccion(entregaId, enunciado = null, respuestas = null) {
   await supabase.from('entregas').update({ estado: 'procesando' }).eq('id', entregaId);
   await cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
 
-  // Llamar a la Edge Function sin bloquear (puede tardar 30-60 seg)
-  supabase.functions.invoke('corregir-entrega', { body: { entrega_id: entregaId } })
+  const body = { entrega_id: entregaId };
+  if (enunciado) body.enunciado = enunciado;
+  if (respuestas) body.respuestas = respuestas;
+
+  supabase.functions.invoke('corregir-entrega', { body })
     .then(({ error }) => {
       if (error) console.error('Error en corrección IA:', error);
-      // Refrescar automático cuando termina
       cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
     });
 }

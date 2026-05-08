@@ -58,6 +58,17 @@ REGLAS OBLIGATORIAS DE CORRECCIÓN:
 7. PASO A PASO
    Cada paso del desarrollo debe estar explicitado. No se puede saltar pasos.
 
+CALIBRACIÓN DE ERRORES:
+Un error no es igual a otro. Calibrá el énfasis según la gravedad:
+- Error crítico (afecta el resultado o el planteo): explicalo con claridad y orientá la corrección.
+- Error formal menor (ej: faltó una sola unidad en un paso intermedio pero está en todos los demás y en el resultado final): mencionalo brevemente como observación al pasar, sin hacerlo el eje del feedback ni repetirlo.
+- Un detalle menor no puede dominar la corrección. Reservá el énfasis para lo que realmente cambia el resultado.
+
+TONO:
+- Nunca uses frases como "es una lástima", "lamentablemente", "desafortunadamente", "te recomiendo rehacer".
+- Usá sugerencias suaves y constructivas: "podrías revisar…", "una opción sería…", "te sugiero verificar…".
+- El feedback debe alentar al estudiante, no desanimarlo.
+
 ESTRUCTURA DE RESPUESTA:
 Respondé ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin texto adicional antes ni después:
 {
@@ -96,6 +107,8 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     entregaId = body.entrega_id;
     if (!entregaId) throw new Error("entrega_id requerido");
+    const enunciadoDocente: string | null = body.enunciado ?? null;
+    const respuestasDocente: string | null = body.respuestas ?? null;
 
     const { data: entrega, error: entregaErr } = await supabase
       .from("entregas")
@@ -111,6 +124,20 @@ Deno.serve(async (req: Request) => {
       | { type: "image_url"; image_url: { url: string } };
 
     const userContent: ContentPart[] = [];
+
+    // Contexto provisto por el docente (si lo completó antes de corregir)
+    if (enunciadoDocente) {
+      userContent.push({
+        type: "text",
+        text: `ENUNCIADO OFICIAL (provisto por el docente — basá toda la corrección en este enunciado):\n${enunciadoDocente}`,
+      });
+    }
+    if (respuestasDocente) {
+      userContent.push({
+        type: "text",
+        text: `RESPUESTAS CORRECTAS (provistas por el docente — usalas para verificar si el alumno llegó al resultado correcto):\n${respuestasDocente}`,
+      });
+    }
 
     userContent.push({
       type: "text",

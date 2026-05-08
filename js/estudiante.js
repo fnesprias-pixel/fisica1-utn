@@ -12,6 +12,7 @@ async function iniciarEstudiante() {
   document.getElementById('nombre-usuario').textContent = perfil.nombre;
 
   await cargarUnidades();
+  await cargarActividades();
   iniciarSeccionEntregas();
   configurarModalContrasena();
 }
@@ -219,6 +220,197 @@ function configurarModalContrasena() {
 }
 
 // =============================================
+// SECCIÓN: ACTIVIDADES
+// =============================================
+
+async function cargarActividades() {
+  const contenedor = document.getElementById('lista-actividades');
+  if (!contenedor) return;
+  contenedor.innerHTML = '<p class="cargando">Cargando actividades…</p>';
+
+  const { data: actividades, error } = await supabase
+    .from('actividades')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !actividades?.length) {
+    contenedor.innerHTML = '<p class="sin-datos">No hay actividades publicadas para tu comisión.</p>';
+    return;
+  }
+
+  // Verificar qué actividades ya fueron entregadas por este alumno
+  const { data: misEntregas } = await supabase
+    .from('entregas')
+    .select('actividad_id, estado')
+    .eq('usuario_id', perfilActual.id)
+    .not('actividad_id', 'is', null);
+
+  const entregasPorActividad = {};
+  (misEntregas || []).forEach(e => { entregasPorActividad[e.actividad_id] = e.estado; });
+
+  contenedor.innerHTML = '';
+  for (const actividad of actividades) {
+    contenedor.appendChild(crearCardActividadEstudiante(actividad, entregasPorActividad[actividad.id]));
+  }
+}
+
+function crearCardActividadEstudiante(actividad, estadoEntrega) {
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.25rem;margin-bottom:1rem;';
+
+  const badgeEntrega = estadoEntrega
+    ? ({
+        pendiente:  '<span class="badge" style="background:#fef3c7;color:#92400e;">Enviado — pendiente</span>',
+        procesando: '<span class="badge" style="background:#dbeafe;color:#1e40af;">Siendo corregido…</span>',
+        corregida:  '<span class="badge" style="background:#d1fae5;color:#065f46;">Corregido ✓</span>',
+      }[estadoEntrega] || estadoEntrega)
+    : '';
+
+  card.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
+      <strong style="font-size:1rem;">${actividad.titulo}</strong>
+      <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
+        ${badgeEntrega}
+        <button class="btn-toggle-enunciado btn-secundario" style="width:auto;padding:0.25rem 0.75rem;font-size:0.82rem;">Ver enunciado</button>
+      </div>
+    </div>
+
+    <div class="enunciado-act" hidden style="margin:0.75rem 0;padding:0.75rem;background:var(--fondo);border-radius:6px;font-size:0.9rem;">
+      ${actividad.enunciado}
+    </div>
+
+    ${!estadoEntrega ? `
+      <button class="btn-primario btn-resolver-actividad" style="width:auto;margin-top:0.5rem;font-size:0.875rem;">
+        📤 Resolver y enviar
+      </button>` : ''}
+  `;
+
+  // Toggle enunciado con MathJax
+  const enunciadoEl = card.querySelector('.enunciado-act');
+  const btnToggle = card.querySelector('.btn-toggle-enunciado');
+  let yaRendered = false;
+  btnToggle.addEventListener('click', async () => {
+    const oculto = enunciadoEl.hidden;
+    enunciadoEl.hidden = !oculto;
+    btnToggle.textContent = oculto ? 'Ocultar enunciado' : 'Ver enunciado';
+    if (oculto && !yaRendered) {
+      yaRendered = true;
+      await MathJax.typesetPromise([enunciadoEl]);
+    }
+  });
+
+  // Abrir modal de entrega
+  card.querySelector('.btn-resolver-actividad')?.addEventListener('click', () => {
+    abrirModalEntregaActividad(actividad, card);
+  });
+
+  return card;
+}
+
+function abrirModalEntregaActividad(actividad, cardOrigen) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;';
+  overlay.innerHTML = `
+    <div style="background:var(--blanco);border-radius:12px;padding:1.5rem;width:100%;max-width:500px;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+      <h3 style="margin-bottom:0.25rem;">Enviar resolución</h3>
+      <p style="font-size:0.875rem;color:var(--texto-suave);margin-bottom:1.25rem;">${actividad.titulo}</p>
+
+      <div class="campo">
+        <label>Imágenes de tu resolución <span style="color:#991b1b;">*</span></label>
+        <input type="file" id="modal-act-imagenes" accept="image/*" multiple required />
+        <div id="modal-act-preview" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem;"></div>
+      </div>
+
+      <div class="campo">
+        <label>Comentario <span style="font-weight:400;color:var(--texto-suave);">(opcional)</span></label>
+        <textarea id="modal-act-comentario" rows="2" placeholder="¿Alguna duda o aclaración sobre tu resolución?"></textarea>
+      </div>
+
+      <div id="modal-act-error" class="mensaje-error" hidden></div>
+
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">
+        <button class="btn-secundario btn-cancelar-act-modal" style="width:auto;">Cancelar</button>
+        <button class="btn-primario btn-enviar-act-modal" style="width:auto;">Enviar</button>
+      </div>
+    </div>
+  `;
+
+  const inputImg = overlay.querySelector('#modal-act-imagenes');
+  const previewDiv = overlay.querySelector('#modal-act-preview');
+  const msgError = overlay.querySelector('#modal-act-error');
+  const btnEnviar = overlay.querySelector('.btn-enviar-act-modal');
+
+  inputImg.addEventListener('change', () => {
+    previewDiv.innerHTML = '';
+    Array.from(inputImg.files).forEach(f => {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--borde);';
+      previewDiv.appendChild(img);
+    });
+  });
+
+  overlay.querySelector('.btn-cancelar-act-modal').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  btnEnviar.addEventListener('click', async () => {
+    const archivos = Array.from(inputImg.files);
+    const comentario = overlay.querySelector('#modal-act-comentario').value.trim();
+    msgError.hidden = true;
+
+    if (!archivos.length) {
+      msgError.textContent = 'Seleccioná al menos una imagen.';
+      msgError.hidden = false;
+      return;
+    }
+
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = 'Subiendo…';
+
+    try {
+      const urls = [];
+      for (const archivo of archivos) {
+        const ext = archivo.name.split('.').pop();
+        const path = `${perfilActual.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('entregas')
+          .upload(path, archivo, { contentType: archivo.type });
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('entregas').getPublicUrl(path);
+        urls.push(publicUrl);
+      }
+
+      btnEnviar.textContent = 'Guardando…';
+
+      const { error: insertError } = await supabase.from('entregas').insert({
+        usuario_id: perfilActual.id,
+        actividad_id: actividad.id,
+        titulo: actividad.titulo,
+        descripcion: comentario || null,
+        imagenes: urls,
+        estado: 'pendiente',
+      });
+
+      if (insertError) throw insertError;
+
+      overlay.remove();
+      // Refrescar secciones
+      await cargarActividades();
+      await cargarMisEntregas();
+    } catch (err) {
+      msgError.textContent = 'Error al enviar. Intentá de nuevo.';
+      msgError.hidden = false;
+      console.error(err);
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = 'Enviar';
+    }
+  });
+
+  document.body.appendChild(overlay);
+  inputImg.focus();
+}
+
+// =============================================
 // SECCIÓN: MIS ENTREGAS
 // =============================================
 
@@ -310,7 +502,7 @@ async function cargarMisEntregas() {
 
   const { data: entregas, error } = await supabase
     .from('entregas')
-    .select('*, correcciones(*, comentarios_correccion(*))')
+    .select('*, correcciones(*, comentarios_correccion(*)), actividades(titulo)')
     .eq('usuario_id', perfilActual.id)
     .order('created_at', { ascending: false });
 
@@ -360,9 +552,13 @@ function crearCardEntregaEstudiante(entrega) {
 
   const div = document.createElement('div');
   div.style.cssText = 'background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.25rem;margin-bottom:1rem;';
+  const actividadBadge = entrega.actividades
+    ? `<span class="badge" style="background:#eff6ff;color:#1e40af;font-size:0.75rem;margin-left:0.4rem;">📋 ${entrega.actividades.titulo}</span>`
+    : '';
+
   div.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
-      <strong>${entrega.titulo}</strong>
+      <div><strong>${entrega.titulo}</strong>${actividadBadge}</div>
       <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
         <span style="font-size:0.8rem;color:var(--texto-suave);">${fecha}</span>
         <button class="btn-min-card" style="background:none;border:1px solid var(--borde);border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:var(--texto-suave);" title="Minimizar">▲</button>

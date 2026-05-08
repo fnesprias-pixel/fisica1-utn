@@ -139,11 +139,22 @@ Deno.serve(async (req: Request) => {
 
     const { data: entrega, error: entregaErr } = await supabase
       .from("entregas")
-      .select("*, usuarios(nombre)")
+      .select("*, usuarios(nombre), actividades(titulo, enunciado, resolucion_correcta)")
       .eq("id", entregaId)
       .single();
 
     if (entregaErr || !entrega) throw new Error("Entrega no encontrada");
+
+    // Si la entrega está vinculada a una actividad, usar su enunciado y solución aprobada
+    // (a menos que el docente haya proporcionado datos propios en esta llamada)
+    if (entrega.actividades) {
+      if (!enunciadoDocente && entrega.actividades.enunciado) {
+        enunciadoDocente = entrega.actividades.enunciado;
+      }
+      if (!respuestasDocente && entrega.actividades.resolucion_correcta) {
+        respuestasDocente = entrega.actividades.resolucion_correcta;
+      }
+    }
 
     // Construir el mensaje en formato OpenAI-compatible
     type ContentPart =

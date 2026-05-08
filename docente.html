@@ -31,6 +31,7 @@
       <button class="tab-btn" data-tab="tab-alumnos">Alumnos</button>
       <button class="tab-btn" data-tab="tab-comisiones">Comisiones</button>
       <button class="tab-btn" data-tab="tab-entregas">Entregas</button>
+      <button class="tab-btn" data-tab="tab-actividades">Actividades</button>
     </nav>
 
     <!-- ===== TAB 1: CONTENIDO ===== -->
@@ -209,6 +210,54 @@
 
       <div id="lista-entregas-docente">
         <p class="cargando">Cargando entregas…</p>
+      </div>
+    </section>
+
+    <!-- ===== TAB 6: ACTIVIDADES ===== -->
+    <section id="tab-actividades" class="tab-panel">
+      <h2 style="margin-bottom:1.25rem;">Actividades</h2>
+
+      <!-- Formulario de nueva actividad -->
+      <div style="background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.5rem;margin-bottom:1.5rem;">
+        <h3 style="margin-bottom:1rem;">Nueva actividad</h3>
+        <form id="form-actividad">
+          <div class="campo">
+            <label for="act-titulo">Título</label>
+            <input type="text" id="act-titulo" placeholder="Ej: Parcial 1 — Cinemática" required />
+          </div>
+
+          <div class="campo">
+            <label for="act-enunciado">Enunciado (HTML + LaTeX)</label>
+            <textarea id="act-enunciado" rows="6" placeholder="Escribí el enunciado completo. Podés usar HTML y fórmulas LaTeX con \( … \) o \[ … \]" required style="resize:vertical;"></textarea>
+          </div>
+
+          <div class="campo">
+            <label>Vista previa del enunciado</label>
+            <div id="preview-act-enunciado" class="preview-mathjax"></div>
+          </div>
+
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+            <div class="campo" style="flex:1;min-width:180px;">
+              <label for="sel-comision-actividad">Comisión <span style="font-weight:400;color:var(--texto-suave);">(vacío = todas)</span></label>
+              <select id="sel-comision-actividad">
+                <option value="">Todas las comisiones</option>
+              </select>
+            </div>
+            <div class="campo" style="flex:1;min-width:180px;">
+              <label for="sel-unidad-actividad">Unidad <span style="font-weight:400;color:var(--texto-suave);">(opcional)</span></label>
+              <select id="sel-unidad-actividad" class="select-unidad">
+                <option value="">— Sin unidad —</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primario">Crear borrador</button>
+        </form>
+      </div>
+
+      <!-- Lista de actividades existentes -->
+      <div id="lista-actividades-docente">
+        <p class="cargando">Cargando actividades…</p>
       </div>
     </section>
 

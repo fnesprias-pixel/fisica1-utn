@@ -62,6 +62,7 @@ function configurarTabs() {
       // Carga lazy por tab
       if (btn.dataset.tab === 'tab-comisiones') cargarTabComisiones();
       if (btn.dataset.tab === 'tab-entregas') cargarEntregasDocente();
+      if (btn.dataset.tab === 'tab-actividades') cargarTabActividades();
     });
   });
 }
@@ -265,10 +266,15 @@ async function cargarComisionesGlobal() {
   comisiones = data || [];
 
   // Poblar filtros de selects en toda la página
-  ['filtro-comision', 'filtro-comision-entregas'].forEach(id => {
+  const opcionesTodas = {
+    'filtro-comision': 'Todas',
+    'filtro-comision-entregas': 'Todas',
+    'sel-comision-actividad': 'Todas las comisiones',
+  };
+  Object.entries(opcionesTodas).forEach(([id, label]) => {
     const sel = document.getElementById(id);
     if (!sel) return;
-    sel.innerHTML = '<option value="">Todas</option>';
+    sel.innerHTML = `<option value="">${label}</option>`;
     comisiones.forEach(c => {
       sel.innerHTML += `<option value="${c.id}">${c.nombre}${c.turno ? ' — ' + c.turno : ''}</option>`;
     });
@@ -795,5 +801,270 @@ document.addEventListener('DOMContentLoaded', () => {
   if (filtroEntregas) filtroEntregas.addEventListener('change', () => cargarEntregasDocente(filtroEntregas.value));
 });
 
+
+// =============================================
+// TAB 6 — ACTIVIDADES
+// =============================================
+
+function configurarFormularioActividad() {
+  const form = document.getElementById('form-actividad');
+  const textareaEnunciado = document.getElementById('act-enunciado');
+  const preview = document.getElementById('preview-act-enunciado');
+
+  let timerPreview;
+  textareaEnunciado.addEventListener('input', () => {
+    clearTimeout(timerPreview);
+    timerPreview = setTimeout(async () => {
+      preview.innerHTML = textareaEnunciado.value;
+      await MathJax.typesetPromise([preview]);
+    }, 600);
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const titulo = document.getElementById('act-titulo').value.trim();
+    const enunciado = textareaEnunciado.value.trim();
+    const comisionId = document.getElementById('sel-comision-actividad').value || null;
+    const unidadId = document.getElementById('sel-unidad-actividad').value || null;
+    if (!titulo || !enunciado) return;
+
+    const btn = form.querySelector('[type=submit]');
+    btn.disabled = true;
+    const { error } = await supabase.from('actividades').insert({
+      titulo,
+      enunciado,
+      comision_id: comisionId,
+      unidad_id: unidadId,
+      created_by: perfilDocente.id,
+    });
+    btn.disabled = false;
+
+    if (!error) {
+      form.reset();
+      preview.innerHTML = '';
+      cargarTabActividades();
+    } else {
+      alert('No se pudo crear la actividad.');
+    }
+  });
+}
+
+async function cargarTabActividades() {
+  const contenedor = document.getElementById('lista-actividades-docente');
+  contenedor.innerHTML = '<p class="cargando">Cargando actividades…</p>';
+
+  // Configurar el formulario de creación la primera vez
+  if (!document.getElementById('form-actividad').dataset.configurado) {
+    document.getElementById('form-actividad').dataset.configurado = '1';
+    configurarFormularioActividad();
+  }
+
+  const { data, error } = await supabase
+    .from('actividades')
+    .select('*, comisiones(nombre, turno), unidades(nombre, orden)')
+    .order('created_at', { ascending: false });
+
+  if (error || !data?.length) {
+    contenedor.innerHTML = '<p class="sin-datos">No hay actividades creadas aún.</p>';
+    return;
+  }
+
+  contenedor.innerHTML = '';
+  for (const actividad of data) {
+    contenedor.appendChild(await crearCardActividad(actividad));
+  }
+}
+
+async function crearCardActividad(actividad) {
+  const estadoBadge = {
+    borrador:  '<span class="badge" style="background:#fef3c7;color:#92400e;">Borrador</span>',
+    publicada: '<span class="badge" style="background:#d1fae5;color:#065f46;">Publicada ✓</span>',
+    cerrada:   '<span class="badge" style="background:#e5e7eb;color:#6b7280;">Cerrada</span>',
+  }[actividad.estado] || actividad.estado;
+
+  const comisionLabel = actividad.comisiones
+    ? `${actividad.comisiones.nombre}${actividad.comisiones.turno ? ' — ' + actividad.comisiones.turno : ''}`
+    : 'Todas las comisiones';
+
+  // Contar entregas vinculadas
+  const { count: cantEntregas } = await supabase
+    .from('entregas')
+    .select('*', { count: 'exact', head: true })
+    .eq('actividad_id', actividad.id);
+
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.25rem;margin-bottom:1.25rem;';
+
+  const puedeEditarSolucion = actividad.estado !== 'cerrada';
+
+  card.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">
+      <div>
+        <strong style="font-size:1rem;">${actividad.titulo}</strong>
+        <span style="color:var(--texto-suave);font-size:0.82rem;margin-left:0.5rem;">${comisionLabel}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
+        ${estadoBadge}
+        <span style="font-size:0.78rem;color:var(--texto-suave);">${cantEntregas ?? 0} entregas</span>
+        <button class="btn-min-act" style="background:none;border:1px solid var(--borde);border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:var(--texto-suave);" title="Minimizar">▲</button>
+        <button class="btn-del-act" style="background:none;border:1px solid #fca5a5;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:#991b1b;" title="Eliminar">✕</button>
+      </div>
+    </div>
+
+    <div class="cuerpo-act">
+      <!-- Enunciado -->
+      <div style="margin-bottom:1rem;">
+        <div style="font-size:0.75rem;font-weight:600;color:var(--texto-suave);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">Enunciado</div>
+        <div class="enunciado-act preview-mathjax" style="font-size:0.9rem;padding:0.75rem;background:var(--fondo);border-radius:6px;">${actividad.enunciado}</div>
+      </div>
+
+      <!-- Resolución de referencia -->
+      <div style="margin-bottom:1rem;">
+        <div style="font-size:0.75rem;font-weight:600;color:var(--texto-suave);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">Resolución de referencia</div>
+
+        ${puedeEditarSolucion ? `
+          <textarea class="txt-resolucion" rows="6"
+            placeholder="Escribí la resolución completa paso a paso. La IA la usará para corregir las entregas de los alumnos."
+            style="width:100%;resize:vertical;font-size:0.875rem;padding:0.6rem;border:1px solid var(--borde);border-radius:6px;box-sizing:border-box;"
+          >${actividad.resolucion_borrador || ''}</textarea>
+          <div class="preview-resolucion preview-mathjax" style="font-size:0.875rem;padding:0.75rem;background:var(--fondo);border-radius:6px;margin-top:0.5rem;${actividad.resolucion_borrador ? '' : 'display:none;'}"></div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.6rem;">
+            <button class="btn-secundario btn-guardar-borrador" style="width:auto;font-size:0.875rem;">Guardar borrador</button>
+            <button class="btn-secundario btn-verificar-ia" style="width:auto;font-size:0.875rem;">🤖 Verificar con IA</button>
+            ${actividad.estado === 'borrador' || actividad.estado === 'publicada' ? `
+              <button class="btn-primario btn-aprobar-publicar" style="width:auto;font-size:0.875rem;">
+                ${actividad.estado === 'publicada' ? 'Actualizar solución' : 'Aprobar y publicar'}
+              </button>` : ''}
+            ${actividad.estado === 'publicada' ? `
+              <button class="btn-peligro btn-cerrar-act" style="width:auto;font-size:0.875rem;background:none;border:1px solid #fca5a5;color:#991b1b;padding:0.3rem 0.75rem;border-radius:6px;cursor:pointer;">Cerrar actividad</button>` : ''}
+          </div>
+          <div class="feedback-ia-act" style="display:none;margin-top:0.75rem;padding:0.75rem;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;font-size:0.875rem;"></div>
+        ` : `
+          <div style="padding:0.75rem;background:var(--fondo);border-radius:6px;font-size:0.875rem;">${actividad.resolucion_correcta || '<em style="color:var(--texto-suave);">Sin resolución cargada.</em>'}</div>
+        `}
+
+        ${actividad.aprobada && actividad.resolucion_correcta ? `
+          <div style="margin-top:0.5rem;font-size:0.78rem;color:#065f46;font-weight:600;">✓ Solución aprobada</div>
+        ` : ''}
+      </div>
+
+      ${actividad.estado === 'publicada' ? `
+        <div style="padding:0.5rem 0.75rem;background:#eff6ff;border-radius:6px;font-size:0.82rem;color:#1e40af;">
+          📢 Publicada — los alumnos de <strong>${comisionLabel}</strong> pueden ver el enunciado y enviar su resolución.
+        </div>` : ''}
+    </div>
+  `;
+
+  // Render MathJax en el enunciado
+  const enunciadoEl = card.querySelector('.enunciado-act');
+  requestAnimationFrame(async () => {
+    await MathJax.typesetPromise([enunciadoEl]);
+  });
+
+  // Minimize/expand
+  const cuerpoAct = card.querySelector('.cuerpo-act');
+  const btnMin = card.querySelector('.btn-min-act');
+  btnMin.addEventListener('click', () => {
+    const cerrado = cuerpoAct.hidden;
+    cuerpoAct.hidden = !cerrado;
+    btnMin.textContent = cerrado ? '▲' : '▼';
+  });
+
+  // Eliminar
+  card.querySelector('.btn-del-act').addEventListener('click', async () => {
+    if (!confirm(`¿Eliminar la actividad "${actividad.titulo}"? Se desvinculan las entregas asociadas.`)) return;
+    await supabase.from('actividades').delete().eq('id', actividad.id);
+    card.remove();
+  });
+
+  if (!puedeEditarSolucion) return card;
+
+  const txtResolucion = card.querySelector('.txt-resolucion');
+  const previewResolucion = card.querySelector('.preview-resolucion');
+  const feedbackIa = card.querySelector('.feedback-ia-act');
+
+  // Preview en tiempo real de la resolución
+  let timerResolucion;
+  txtResolucion?.addEventListener('input', () => {
+    clearTimeout(timerResolucion);
+    timerResolucion = setTimeout(async () => {
+      if (txtResolucion.value.trim()) {
+        previewResolucion.innerHTML = txtResolucion.value;
+        previewResolucion.style.display = '';
+        await MathJax.typesetPromise([previewResolucion]);
+      } else {
+        previewResolucion.style.display = 'none';
+      }
+    }, 600);
+  });
+
+  // Guardar borrador
+  card.querySelector('.btn-guardar-borrador')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    await supabase.from('actividades').update({ resolucion_borrador: txtResolucion.value.trim() }).eq('id', actividad.id);
+    btn.disabled = false;
+    btn.textContent = 'Guardar borrador';
+    btn.style.color = '#065f46';
+    setTimeout(() => { btn.style.color = ''; }, 1500);
+  });
+
+  // Verificar con IA
+  card.querySelector('.btn-verificar-ia')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const resolucion = txtResolucion.value.trim();
+    if (!resolucion) { alert('Escribí la resolución antes de verificar.'); return; }
+    btn.disabled = true;
+    btn.textContent = '⏳ Verificando…';
+    feedbackIa.style.display = 'none';
+
+    const { data, error } = await supabase.functions.invoke('revisar-solucion', {
+      body: { enunciado: actividad.enunciado, resolucion },
+    });
+
+    btn.disabled = false;
+    btn.textContent = '🤖 Verificar con IA';
+
+    if (error || !data?.feedback) {
+      feedbackIa.style.display = '';
+      feedbackIa.style.background = '#fef2f2';
+      feedbackIa.style.borderColor = '#fca5a5';
+      feedbackIa.textContent = 'Error al verificar. Intentá de nuevo.';
+      return;
+    }
+
+    feedbackIa.style.display = '';
+    feedbackIa.style.background = '#f0fdf4';
+    feedbackIa.style.borderColor = '#86efac';
+    feedbackIa.innerHTML = renderFeedback(data.feedback.replace(/\n/g, '<br>'));
+  });
+
+  // Aprobar y publicar (o actualizar solución publicada)
+  card.querySelector('.btn-aprobar-publicar')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const resolucion = txtResolucion.value.trim();
+    if (!resolucion) { alert('Escribí la resolución de referencia antes de publicar.'); return; }
+    if (!confirm('¿Aprobar esta resolución y publicar la actividad? Los alumnos podrán verla.')) return;
+    btn.disabled = true;
+    btn.textContent = 'Publicando…';
+    await supabase.from('actividades').update({
+      resolucion_borrador: resolucion,
+      resolucion_correcta: resolucion,
+      aprobada: true,
+      estado: 'publicada',
+    }).eq('id', actividad.id);
+    cargarTabActividades();
+  });
+
+  // Cerrar actividad
+  card.querySelector('.btn-cerrar-act')?.addEventListener('click', async () => {
+    if (!confirm('¿Cerrar esta actividad? Los alumnos dejarán de verla.')) return;
+    await supabase.from('actividades').update({ estado: 'cerrada' }).eq('id', actividad.id);
+    cargarTabActividades();
+  });
+
+  return card;
+}
 
 document.addEventListener('DOMContentLoaded', iniciarDocente);

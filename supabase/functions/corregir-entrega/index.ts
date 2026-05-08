@@ -78,8 +78,6 @@ Deno.serve(async (req: Request) => {
     entregaId = body.entrega_id;
     if (!entregaId) throw new Error("entrega_id requerido");
 
-    await supabase.from("entregas").update({ estado: "procesando" }).eq("id", entregaId);
-
     const { data: entrega, error: entregaErr } = await supabase
       .from("entregas")
       .select("*, usuarios(nombre)")

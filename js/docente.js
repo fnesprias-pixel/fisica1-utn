@@ -627,14 +627,17 @@ function renderVideosDocente(videos) {
 }
 
 async function iniciarCorreccion(entregaId) {
-  const { error } = await supabase.functions.invoke('corregir-entrega', {
-    body: { entrega_id: entregaId }
-  });
-  if (error) {
-    console.error('Error al corregir:', error);
-    alert('Error al iniciar la corrección. Intentá nuevamente.');
-    await supabase.from('entregas').update({ estado: 'pendiente' }).eq('id', entregaId);
-  }
+  // Marcar como procesando de inmediato y refrescar la UI — no esperar la IA
+  await supabase.from('entregas').update({ estado: 'procesando' }).eq('id', entregaId);
+  await cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
+
+  // Llamar a la Edge Function sin bloquear (puede tardar 30-60 seg)
+  supabase.functions.invoke('corregir-entrega', { body: { entrega_id: entregaId } })
+    .then(({ error }) => {
+      if (error) console.error('Error en corrección IA:', error);
+      // Refrescar automático cuando termina
+      cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
+    });
 }
 
 // Filtro de comisión en entregas

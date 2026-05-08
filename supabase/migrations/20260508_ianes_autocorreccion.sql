@@ -1,6 +1,11 @@
 -- Habilitar autocorrección iaNes por estudiante (piloto)
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS autocorreccion_ia BOOLEAN DEFAULT FALSE;
 
+-- Docentes pueden actualizar datos de alumnos (ej: habilitar autocorrección)
+CREATE POLICY "docente_actualiza_alumnos"
+ON usuarios FOR UPDATE TO authenticated
+USING (es_docente()) WITH CHECK (es_docente());
+
 -- Comentarios de alumnos sobre sus correcciones
 CREATE TABLE IF NOT EXISTS comentarios_correccion (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),

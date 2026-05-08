@@ -328,7 +328,11 @@ async function cargarAlumnos(comisionId = '') {
     `;
     tr.querySelector('.toggle-ianes').addEventListener('change', async (e) => {
       e.stopPropagation();
-      await supabase.from('usuarios').update({ autocorreccion_ia: e.target.checked }).eq('id', alumno.id);
+      const cb = e.target;
+      cb.disabled = true;
+      const { error } = await supabase.from('usuarios').update({ autocorreccion_ia: cb.checked }).eq('id', alumno.id);
+      cb.disabled = false;
+      if (error) { cb.checked = !cb.checked; alert('No se pudo actualizar.'); }
     });
     tr.addEventListener('click', (e) => {
       if (e.target.classList.contains('toggle-ianes')) return;

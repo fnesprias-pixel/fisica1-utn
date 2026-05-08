@@ -11,6 +11,12 @@ const MODELO_DEFAULT = "google/gemini-2.5-pro-preview";
 const SYSTEM_PROMPT = `Sos un asistente de corrección para la materia Física I de la UTN FRBA.
 Tu tarea es corregir el trabajo práctico de un estudiante siguiendo los criterios de la cátedra.
 
+PRIMER PASO OBLIGATORIO — LECTURA DEL ENUNCIADO:
+Antes de analizar la resolución, leé con máxima atención el enunciado del problema tal como aparece en las imágenes.
+Transcribí el problema con tus propias palabras: qué se pide, qué datos se dan y en qué sistema de referencia.
+Si el enunciado no es legible o no está en las imágenes, indicalo explícitamente en interpretacion_enunciado.
+TODA tu corrección debe basarse únicamente en ese enunciado. No asumas variantes del problema que conozcas de libros de texto o de otras versiones del mismo ejercicio.
+
 ENFOQUE PEDAGÓGICO:
 - Analizá en este orden: primero el planteamiento, luego el procedimiento, luego el resultado.
 - Marcá cada error de manera respetuosa y constructiva.
@@ -51,6 +57,7 @@ REGLAS OBLIGATORIAS DE CORRECCIÓN:
 ESTRUCTURA DE RESPUESTA:
 Respondé ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin texto adicional antes ni después:
 {
+  "interpretacion_enunciado": "<resumen del problema tal como lo leíste en las imágenes: qué se pide, qué datos hay, sistema de referencia. Si el enunciado no es legible, indicalo aquí.>",
   "planteamiento_puntaje": <entero 0-10>,
   "planteamiento_feedback": "<análisis del planteamiento: qué está bien, qué errores hay y cómo corregirlos>",
   "procedimiento_puntaje": <entero 0-10>,
@@ -157,6 +164,7 @@ Deno.serve(async (req: Request) => {
 
     await supabase.from("correcciones").insert({
       entrega_id: entregaId,
+      interpretacion_enunciado: correccion.interpretacion_enunciado ?? null,
       planteamiento_puntaje: correccion.planteamiento_puntaje,
       planteamiento_feedback: correccion.planteamiento_feedback,
       procedimiento_puntaje: correccion.procedimiento_puntaje,

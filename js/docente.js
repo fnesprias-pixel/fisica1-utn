@@ -570,6 +570,11 @@ async function crearCardEntregaDocente(entrega) {
   const correccionHTML = correccion ? `
     <div style="margin-top:1rem;padding:1rem;background:var(--fondo);border-radius:8px;border-left:4px solid var(--primario);">
       <h4 style="margin-bottom:0.75rem;">Corrección IA</h4>
+      ${correccion.interpretacion_enunciado ? `
+        <div style="margin-bottom:1rem;padding:0.75rem;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd;">
+          <div style="font-size:0.75rem;font-weight:600;color:#0369a1;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.35rem;">Como interpretó el enunciado</div>
+          <div style="font-size:0.875rem;color:#0c4a6e;">${correccion.interpretacion_enunciado}</div>
+        </div>` : ''}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;margin-bottom:0.75rem;">
         ${renderDimension('Planteamiento', correccion.planteamiento_puntaje, correccion.planteamiento_feedback)}
         ${renderDimension('Procedimiento', correccion.procedimiento_puntaje, correccion.procedimiento_feedback)}

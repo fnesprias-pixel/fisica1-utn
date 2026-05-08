@@ -16,10 +16,10 @@ async function iniciarEstudiante() {
   configurarModalContrasena();
 }
 
-// Carga y renderiza las clases disponibles como navegación
+// Carga y renderiza las unidades activas como acordeón
 async function cargarUnidades() {
-  const nav = document.getElementById('nav-clases');
-  nav.innerHTML = '<p class="cargando">Cargando clases…</p>';
+  const contenedor = document.getElementById('lista-unidades');
+  contenedor.innerHTML = '<p class="cargando">Cargando unidades…</p>';
 
   const { data: unidades, error } = await supabase
     .from('unidades')
@@ -28,19 +28,138 @@ async function cargarUnidades() {
     .order('orden');
 
   if (error || !unidades?.length) {
-    nav.innerHTML = '<p class="sin-datos">No hay clases disponibles.</p>';
+    contenedor.innerHTML = '<p class="sin-datos">No hay unidades disponibles.</p>';
     return;
   }
 
-  nav.innerHTML = '';
+  contenedor.innerHTML = '';
 
   for (const unidad of unidades) {
-    const link = document.createElement('a');
-    link.href = `clase.html?unidad_id=${unidad.id}`;
-    link.className = 'nav-link';
-    link.textContent = unidad.nombre;
-    nav.appendChild(link);
+    const progreso = await obtenerProgresoUnidad(unidad.id);
+    const card = crearCardUnidad(unidad, progreso);
+    contenedor.appendChild(card);
   }
+}
+
+// Obtiene el porcentaje de respuestas correctas para una unidad
+async function obtenerProgresoUnidad(unidadId) {
+  const { data: quizzes } = await supabase
+    .from('quizzes')
+    .select('id')
+    .eq('unidad_id', unidadId);
+
+  if (!quizzes?.length) return null;
+
+  const quizIds = quizzes.map(q => q.id);
+
+  const { data: progresos } = await supabase
+    .from('progreso')
+    .select('quiz_id, es_correcto')
+    .eq('usuario_id', perfilActual.id)
+    .in('quiz_id', quizIds);
+
+  if (!progresos?.length) return { pct: 0, total: quizzes.length, correctas: 0 };
+
+  const porPregunta = {};
+  for (const p of progresos) {
+    porPregunta[p.quiz_id] = p.es_correcto;
+  }
+
+  const correctas = Object.values(porPregunta).filter(Boolean).length;
+  return { pct: Math.round((correctas / quizzes.length) * 100), total: quizzes.length, correctas };
+}
+
+// Construye el DOM de una card de unidad
+function crearCardUnidad(unidad, progreso) {
+  const card = document.createElement('div');
+  card.className = 'unidad-card';
+  card.dataset.unidadId = unidad.id;
+
+  const progresoHTML = progreso
+    ? `<div class="barra-progreso-wrap">
+         <div class="barra-progreso">
+           <div class="barra-progreso-fill" style="width:${progreso.pct}%"></div>
+         </div>
+         <span class="progreso-pct">${progreso.pct}%</span>
+       </div>`
+    : '';
+
+  const progresoTexto = progreso ? `${progreso.correctas}/${progreso.total} correctas` : 'Sin quiz';
+
+  card.innerHTML = `
+    <div class="unidad-header">
+      <span class="unidad-titulo">${unidad.nombre}</span>
+      <span class="unidad-progreso">${progresoTexto}</span>
+      <span class="unidad-chevron">▼</span>
+    </div>
+    <div class="unidad-cuerpo">
+      <p class="unidad-descripcion">${unidad.descripcion || ''}</p>
+      ${progresoHTML}
+      <div class="seccion-titulo">Teoría</div>
+      <div class="lista-contenido" id="teoria-${unidad.id}">
+        <p class="cargando">Cargando…</p>
+      </div>
+      <div class="seccion-titulo">Ejercicios resueltos</div>
+      <div class="lista-contenido" id="ejercicios-${unidad.id}">
+        <p class="cargando">Cargando…</p>
+      </div>
+    </div>
+  `;
+
+  card.querySelector('.unidad-header').addEventListener('click', () => toggleUnidad(card, unidad.id));
+  return card;
+}
+
+async function toggleUnidad(card, unidadId) {
+  const yaAbierta = card.classList.contains('abierta');
+  card.classList.toggle('abierta');
+  if (!yaAbierta) {
+    await cargarContenido(unidadId, 'teoria');
+    await cargarContenido(unidadId, 'ejercicio');
+  }
+}
+
+async function cargarContenido(unidadId, tipo) {
+  const contenedor = document.getElementById(
+    tipo === 'teoria' ? `teoria-${unidadId}` : `ejercicios-${unidadId}`
+  );
+  if (contenedor.dataset.cargado) return;
+  contenedor.dataset.cargado = '1';
+
+  const { data: items, error } = await supabase
+    .from('contenido')
+    .select('*')
+    .eq('unidad_id', unidadId)
+    .eq('tipo', tipo)
+    .order('orden');
+
+  if (error || !items?.length) {
+    contenedor.innerHTML = '<p class="sin-datos">Sin contenido cargado.</p>';
+    return;
+  }
+
+  contenedor.innerHTML = '';
+  for (const item of items) contenedor.appendChild(crearItemContenido(item));
+}
+
+function crearItemContenido(item) {
+  const div = document.createElement('div');
+  div.className = 'contenido-item';
+  div.innerHTML = `
+    <div class="contenido-item-header"><span>${item.titulo}</span><span>▼</span></div>
+    <div class="contenido-item-cuerpo" data-id="${item.id}">${item.cuerpo}</div>
+  `;
+  const headerEl = div.querySelector('.contenido-item-header');
+  const cuerpoEl = div.querySelector('.contenido-item-cuerpo');
+  headerEl.addEventListener('click', async () => {
+    const yaAbierto = div.classList.contains('abierto');
+    div.classList.toggle('abierto');
+    if (!yaAbierto) {
+      await MathJax.typesetPromise([cuerpoEl]);
+      await supabase.from('vistas_contenido').insert({ usuario_id: perfilActual.id, contenido_id: item.id });
+    }
+  });
+  return div;
 }
 
 // Configura el modal de cambio de contraseña

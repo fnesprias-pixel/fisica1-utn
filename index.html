@@ -168,7 +168,9 @@
         return;
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://fisica1-utn-w59y.vercel.app/reset-password.html'
+      });
       if (error) {
         errorLogin.textContent = 'No se pudo enviar el correo. Verificá la dirección.';
         errorLogin.hidden = false;

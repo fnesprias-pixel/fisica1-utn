@@ -1045,8 +1045,9 @@ async function crearCardActividad(actividad) {
           >${actividad.resolucion_borrador || ''}</textarea>
           <div class="preview-resolucion preview-mathjax" style="font-size:0.875rem;padding:0.75rem;background:var(--fondo);border-radius:6px;margin-top:0.5rem;${actividad.resolucion_borrador ? '' : 'display:none;'}"></div>
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.6rem;">
+            <button class="btn-secundario btn-generar-resolucion" style="width:auto;font-size:0.875rem;">🤖 Generar resolución</button>
             <button class="btn-secundario btn-guardar-borrador" style="width:auto;font-size:0.875rem;">Guardar borrador</button>
-            <button class="btn-secundario btn-verificar-ia" style="width:auto;font-size:0.875rem;">🤖 Verificar con IA</button>
+            <button class="btn-secundario btn-verificar-ia" style="width:auto;font-size:0.875rem;">Verificar con IA</button>
             ${actividad.estado === 'borrador' || actividad.estado === 'publicada' ? `
               <button class="btn-primario btn-aprobar-publicar" style="width:auto;font-size:0.875rem;">
                 ${actividad.estado === 'publicada' ? 'Actualizar solución' : 'Aprobar y publicar'}
@@ -1112,6 +1113,45 @@ async function crearCardActividad(actividad) {
         previewResolucion.style.display = 'none';
       }
     }, 600);
+  });
+
+  // Generar resolución con IA
+  card.querySelector('.btn-generar-resolucion')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    if (txtResolucion.value.trim()) {
+      if (!confirm('Ya hay una resolución escrita. ¿Reemplazarla con la versión de la IA?')) return;
+    }
+    btn.disabled = true;
+    btn.textContent = '⏳ Generando…';
+    feedbackIa.style.display = 'none';
+
+    const { data, error } = await supabase.functions.invoke('resolver-actividad', {
+      body: { enunciado: actividad.enunciado },
+    });
+
+    btn.disabled = false;
+    btn.textContent = '🤖 Generar resolución';
+
+    if (error || !data?.resolucion) {
+      feedbackIa.style.display = '';
+      feedbackIa.style.background = '#fef2f2';
+      feedbackIa.style.borderColor = '#fca5a5';
+      feedbackIa.textContent = 'Error al generar. Intentá de nuevo.';
+      return;
+    }
+
+    txtResolucion.value = data.resolucion;
+    previewResolucion.innerHTML = data.resolucion;
+    previewResolucion.style.display = '';
+    await MathJax.typesetPromise([previewResolucion]);
+
+    // Guardar automáticamente el borrador
+    await supabase.from('actividades').update({ resolucion_borrador: data.resolucion }).eq('id', actividad.id);
+
+    feedbackIa.style.display = '';
+    feedbackIa.style.background = '#f0fdf4';
+    feedbackIa.style.borderColor = '#86efac';
+    feedbackIa.innerHTML = '✓ Resolución generada por la IA y guardada como borrador. Revisala, corregí lo que haga falta y aprobala cuando esté lista.';
   });
 
   // Guardar borrador

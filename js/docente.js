@@ -550,11 +550,13 @@ async function crearCardEntregaDocente(entrega) {
   }[entrega.estado] || entrega.estado;
 
   // Obtener corrección si existe
-  const { data: correccion } = await supabase
+  const { data: corrData } = await supabase
     .from('correcciones')
     .select('*')
     .eq('entrega_id', entrega.id)
-    .single();
+    .order('created_at', { ascending: false })
+    .limit(1);
+  const correccion = corrData?.[0] ?? null;
 
   const card = document.createElement('div');
   card.style.cssText = 'background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.25rem;';

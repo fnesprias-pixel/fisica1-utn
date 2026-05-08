@@ -324,7 +324,7 @@ async function cargarMisEntregas() {
 }
 
 function crearCardEntregaEstudiante(entrega) {
-  const correccion = entrega.correcciones?.[0] || null;
+  const correccion = entrega.correcciones?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] ?? null;
   const fecha = new Date(entrega.created_at).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
 
   const estadoBadge = {

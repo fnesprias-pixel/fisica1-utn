@@ -323,6 +323,25 @@ async function cargarMisEntregas() {
   entregas.forEach(entrega => contenedor.appendChild(crearCardEntregaEstudiante(entrega)));
 }
 
+function renderFeedback(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
+    .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
+    .replace(/([a-zA-Zα-ωΑ-Ω0-9])\^([0-9a-zA-Z])/g, '$1<sup>$2</sup>')
+    .replace(/([a-zA-Zα-ωΑ-Ω0-9])_([0-9a-zA-Z,]+)/g, '$1<sub>$2</sub>');
+}
+
+function renderInterpretacion(texto) {
+  if (!texto) return '';
+  return `
+    <div style="margin-bottom:0.75rem;padding:0.75rem;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd;">
+      <div style="font-size:0.72rem;font-weight:600;color:#0369a1;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.35rem;">Como interpretó el enunciado</div>
+      <div style="font-size:0.875rem;color:#0c4a6e;">${renderFeedback(texto)}</div>
+    </div>`;
+}
+
 function crearCardEntregaEstudiante(entrega) {
   const correccion = entrega.correcciones?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] ?? null;
   const fecha = new Date(entrega.created_at).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
@@ -339,34 +358,84 @@ function crearCardEntregaEstudiante(entrega) {
     </a>`
   ).join('');
 
-  let correccionHTML = '';
-  if (correccion) {
-    correccionHTML = `
-      <div style="margin-top:1rem;padding:1rem;background:var(--fondo);border-radius:8px;border-left:4px solid var(--primario);">
-        <h4 style="margin-bottom:0.75rem;">Tu corrección</h4>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;margin-bottom:0.75rem;">
-          ${renderDimensionEstudiante('Planteamiento', correccion.planteamiento_puntaje, correccion.planteamiento_feedback)}
-          ${renderDimensionEstudiante('Procedimiento', correccion.procedimiento_puntaje, correccion.procedimiento_feedback)}
-          ${renderDimensionEstudiante('Resultado',     correccion.resultado_puntaje,     correccion.resultado_feedback)}
-        </div>
-        ${correccion.comentario_general ? `<p style="font-size:0.9rem;"><strong>Comentario:</strong> ${correccion.comentario_general}</p>` : ''}
-        ${renderVideosSugeridos(correccion.videos_sugeridos)}
-      </div>`;
-  }
-
   const div = document.createElement('div');
   div.style.cssText = 'background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.25rem;margin-bottom:1rem;';
   div.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
       <strong>${entrega.titulo}</strong>
-      <span style="font-size:0.8rem;color:var(--texto-suave);">${fecha}</span>
+      <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
+        <span style="font-size:0.8rem;color:var(--texto-suave);">${fecha}</span>
+        <button class="btn-min-card" style="background:none;border:1px solid var(--borde);border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:var(--texto-suave);" title="Minimizar">▲</button>
+        <button class="btn-del-card" style="background:none;border:1px solid #fca5a5;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:#991b1b;" title="Eliminar">✕</button>
+      </div>
     </div>
-    ${estadoBadge}
-    ${entrega.descripcion ? `<p style="font-size:0.875rem;color:var(--texto-suave);margin:0.5rem 0;">${entrega.descripcion}</p>` : ''}
-    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">${imagenesHTML}</div>
-    ${correccionHTML}
+    <div class="card-cuerpo-entrega">
+      ${estadoBadge}
+      ${entrega.descripcion ? `<p style="font-size:0.875rem;color:var(--texto-suave);margin:0.5rem 0;">${entrega.descripcion}</p>` : ''}
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">${imagenesHTML}</div>
+      ${renderCorreccionEstudiante(correccion)}
+    </div>
   `;
+
+  const cuerpo = div.querySelector('.card-cuerpo-entrega');
+  const btnMin = div.querySelector('.btn-min-card');
+  btnMin.addEventListener('click', () => {
+    const cerrado = cuerpo.hidden;
+    cuerpo.hidden = !cerrado;
+    btnMin.textContent = cerrado ? '▲' : '▼';
+  });
+
+  div.querySelector('.btn-del-card').addEventListener('click', async () => {
+    if (!confirm('¿Eliminar esta entrega? No se puede deshacer.')) return;
+    await supabase.from('correcciones').delete().eq('entrega_id', entrega.id);
+    const { error } = await supabase.from('entregas').delete().eq('id', entrega.id).eq('usuario_id', perfilActual.id);
+    if (error) { alert('No se pudo eliminar.'); return; }
+    div.remove();
+  });
+
   return div;
+}
+
+function renderCorreccionEstudiante(correccion) {
+  if (!correccion) return '';
+  const problemas = correccion.problemas?.length ? correccion.problemas : null;
+
+  let cuerpoHTML = '';
+  if (problemas) {
+    cuerpoHTML = problemas.map((p, i) => `
+      <div${i > 0 ? ' style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--borde);"' : ''}>
+        <div style="font-weight:600;color:var(--primario);margin-bottom:0.75rem;">
+          Problema ${p.numero || (i + 1)}${p.titulo ? ' — ' + p.titulo : ''}
+        </div>
+        ${renderDimensionEstudiante('Planteamiento', p.planteamiento_puntaje, p.planteamiento_feedback)}
+        <div style="height:0.5rem;"></div>
+        ${renderDimensionEstudiante('Procedimiento', p.procedimiento_puntaje, p.procedimiento_feedback)}
+        <div style="height:0.5rem;"></div>
+        ${renderDimensionEstudiante('Resultado', p.resultado_puntaje, p.resultado_feedback)}
+        ${p.comentario ? `<p style="font-size:0.875rem;margin-top:0.75rem;"><strong>Comentario:</strong> ${renderFeedback(p.comentario)}</p>` : ''}
+      </div>
+    `).join('');
+  } else {
+    cuerpoHTML = `
+      ${renderDimensionEstudiante('Planteamiento', correccion.planteamiento_puntaje, correccion.planteamiento_feedback)}
+      <div style="height:0.5rem;"></div>
+      ${renderDimensionEstudiante('Procedimiento', correccion.procedimiento_puntaje, correccion.procedimiento_feedback)}
+      <div style="height:0.5rem;"></div>
+      ${renderDimensionEstudiante('Resultado', correccion.resultado_puntaje, correccion.resultado_feedback)}
+    `;
+  }
+
+  const comentarioFinal = correccion.comentario_general
+    ? `<p style="font-size:0.875rem;margin-top:0.75rem;${problemas ? 'padding-top:0.75rem;border-top:1px solid var(--borde);' : ''}"><strong>Comentario:</strong> ${renderFeedback(correccion.comentario_general)}</p>`
+    : '';
+
+  return `
+    <div style="margin-top:1rem;padding:1rem;background:var(--fondo);border-radius:8px;border-left:4px solid var(--primario);">
+      <h4 style="margin-bottom:0.75rem;">Tu corrección</h4>
+      ${cuerpoHTML}
+      ${comentarioFinal}
+      ${renderVideosSugeridos(correccion.videos_sugeridos)}
+    </div>`;
 }
 
 function renderDimensionEstudiante(label, puntaje, feedback) {
@@ -375,7 +444,7 @@ function renderDimensionEstudiante(label, puntaje, feedback) {
   return `
     <div style="background:${bg};padding:0.75rem;border-radius:6px;">
       <div style="font-weight:600;color:${color};margin-bottom:0.25rem;">${label}: ${puntaje ?? '—'}/10</div>
-      <div style="font-size:0.85rem;">${feedback || ''}</div>
+      <div style="font-size:0.85rem;">${renderFeedback(feedback) || ''}</div>
     </div>`;
 }
 

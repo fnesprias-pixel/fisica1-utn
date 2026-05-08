@@ -549,7 +549,6 @@ async function crearCardEntregaDocente(entrega) {
     corregida:   '<span class="badge" style="background:#d1fae5;color:#065f46;">Corregida ✓</span>',
   }[entrega.estado] || entrega.estado;
 
-  // Obtener corrección si existe
   const { data: corrData } = await supabase
     .from('correcciones')
     .select('*')
@@ -567,52 +566,115 @@ async function crearCardEntregaDocente(entrega) {
     </a>`
   ).join('');
 
-  const correccionHTML = correccion ? `
-    <div style="margin-top:1rem;padding:1rem;background:var(--fondo);border-radius:8px;border-left:4px solid var(--primario);">
-      <h4 style="margin-bottom:0.75rem;">Corrección IA</h4>
-      ${correccion.interpretacion_enunciado ? `
-        <div style="margin-bottom:1rem;padding:0.75rem;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd;">
-          <div style="font-size:0.75rem;font-weight:600;color:#0369a1;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.35rem;">Como interpretó el enunciado</div>
-          <div style="font-size:0.875rem;color:#0c4a6e;">${correccion.interpretacion_enunciado}</div>
-        </div>` : ''}
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;margin-bottom:0.75rem;">
-        ${renderDimension('Planteamiento', correccion.planteamiento_puntaje, correccion.planteamiento_feedback)}
-        ${renderDimension('Procedimiento', correccion.procedimiento_puntaje, correccion.procedimiento_feedback)}
-        ${renderDimension('Resultado', correccion.resultado_puntaje, correccion.resultado_feedback)}
-      </div>
-      ${correccion.comentario_general ? `<p style="font-size:0.9rem;"><strong>Comentario general:</strong> ${correccion.comentario_general}</p>` : ''}
-      ${renderVideosDocente(correccion.videos_sugeridos)}
-    </div>
-  ` : '';
-
   card.innerHTML = `
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
       <div>
         <strong>${alumno?.nombre || '—'}</strong>
         <span style="color:var(--texto-suave);font-size:0.85rem;margin-left:0.5rem;">${comisionNombre}</span>
         <span style="color:var(--texto-suave);font-size:0.8rem;margin-left:0.5rem;">${fecha}</span>
       </div>
-      ${estadoBadge}
+      <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
+        ${estadoBadge}
+        <button class="btn-min-card" style="background:none;border:1px solid var(--borde);border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:var(--texto-suave);" title="Minimizar">▲</button>
+        <button class="btn-del-card" style="background:none;border:1px solid #fca5a5;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:#991b1b;" title="Eliminar">✕</button>
+      </div>
     </div>
-    <p style="font-weight:600;margin-bottom:0.5rem;">${entrega.titulo}</p>
-    ${entrega.descripcion ? `<p style="font-size:0.875rem;color:var(--texto-suave);margin-bottom:0.75rem;">${entrega.descripcion}</p>` : ''}
-    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">${imagenesHTML}</div>
-    ${entrega.estado === 'pendiente' ? `
-      <button class="btn-primario btn-corregir" data-id="${entrega.id}" style="width:auto;">
-        Corregir con IA
-      </button>` : ''}
-    ${correccionHTML}
+    <div class="card-cuerpo-entrega">
+      <p style="font-weight:600;margin-bottom:0.5rem;">${entrega.titulo}</p>
+      ${entrega.descripcion ? `<p style="font-size:0.875rem;color:var(--texto-suave);margin-bottom:0.75rem;">${entrega.descripcion}</p>` : ''}
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">${imagenesHTML}</div>
+      ${entrega.estado === 'pendiente' ? `<button class="btn-primario btn-corregir" data-id="${entrega.id}" style="width:auto;">Corregir con IA</button>` : ''}
+      ${renderCorreccionDocente(correccion)}
+    </div>
   `;
+
+  const cuerpo = card.querySelector('.card-cuerpo-entrega');
+  const btnMin = card.querySelector('.btn-min-card');
+  btnMin.addEventListener('click', () => {
+    const cerrado = cuerpo.hidden;
+    cuerpo.hidden = !cerrado;
+    btnMin.textContent = cerrado ? '▲' : '▼';
+  });
+
+  card.querySelector('.btn-del-card').addEventListener('click', async () => {
+    if (!confirm(`¿Eliminar la entrega de ${alumno?.nombre || 'este alumno'}? No se puede deshacer.`)) return;
+    await supabase.from('correcciones').delete().eq('entrega_id', entrega.id);
+    const { error } = await supabase.from('entregas').delete().eq('id', entrega.id);
+    if (error) { alert('No se pudo eliminar.'); return; }
+    card.remove();
+  });
 
   card.querySelector('.btn-corregir')?.addEventListener('click', async (e) => {
     const btn = e.currentTarget;
     btn.disabled = true;
     btn.textContent = 'Enviando…';
     await iniciarCorreccion(entrega.id);
-    await cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
   });
 
   return card;
+}
+
+function renderFeedback(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
+    .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
+    .replace(/([a-zA-Zα-ωΑ-Ω0-9])\^([0-9a-zA-Z])/g, '$1<sup>$2</sup>')
+    .replace(/([a-zA-Zα-ωΑ-Ω0-9])_([0-9a-zA-Z,]+)/g, '$1<sub>$2</sub>');
+}
+
+function renderInterpretacion(texto) {
+  if (!texto) return '';
+  return `
+    <div style="margin-bottom:0.75rem;padding:0.75rem;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd;">
+      <div style="font-size:0.72rem;font-weight:600;color:#0369a1;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.35rem;">Como interpretó el enunciado</div>
+      <div style="font-size:0.875rem;color:#0c4a6e;">${renderFeedback(texto)}</div>
+    </div>`;
+}
+
+function renderCorreccionDocente(correccion) {
+  if (!correccion) return '';
+  const problemas = correccion.problemas?.length ? correccion.problemas : null;
+
+  let cuerpoHTML = '';
+  if (problemas) {
+    cuerpoHTML = problemas.map((p, i) => `
+      <div${i > 0 ? ' style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--borde);"' : ''}>
+        <div style="font-weight:600;color:var(--primario);margin-bottom:0.75rem;">
+          Problema ${p.numero || (i + 1)}${p.titulo ? ' — ' + p.titulo : ''}
+        </div>
+        ${renderInterpretacion(p.interpretacion_enunciado)}
+        ${renderDimension('Planteamiento', p.planteamiento_puntaje, p.planteamiento_feedback)}
+        <div style="height:0.5rem;"></div>
+        ${renderDimension('Procedimiento', p.procedimiento_puntaje, p.procedimiento_feedback)}
+        <div style="height:0.5rem;"></div>
+        ${renderDimension('Resultado', p.resultado_puntaje, p.resultado_feedback)}
+        ${p.comentario ? `<p style="font-size:0.875rem;margin-top:0.75rem;"><strong>Comentario:</strong> ${renderFeedback(p.comentario)}</p>` : ''}
+      </div>
+    `).join('');
+  } else {
+    cuerpoHTML = `
+      ${renderInterpretacion(correccion.interpretacion_enunciado)}
+      ${renderDimension('Planteamiento', correccion.planteamiento_puntaje, correccion.planteamiento_feedback)}
+      <div style="height:0.5rem;"></div>
+      ${renderDimension('Procedimiento', correccion.procedimiento_puntaje, correccion.procedimiento_feedback)}
+      <div style="height:0.5rem;"></div>
+      ${renderDimension('Resultado', correccion.resultado_puntaje, correccion.resultado_feedback)}
+    `;
+  }
+
+  const comentarioFinal = correccion.comentario_general
+    ? `<p style="font-size:0.875rem;margin-top:0.75rem;${problemas ? 'padding-top:0.75rem;border-top:1px solid var(--borde);' : ''}"><strong>Comentario general:</strong> ${renderFeedback(correccion.comentario_general)}</p>`
+    : '';
+
+  return `
+    <div style="margin-top:1rem;padding:1rem;background:var(--fondo);border-radius:8px;border-left:4px solid var(--primario);">
+      <h4 style="margin-bottom:0.75rem;">Corrección IA</h4>
+      ${cuerpoHTML}
+      ${comentarioFinal}
+      ${renderVideosDocente(correccion.videos_sugeridos)}
+    </div>`;
 }
 
 function renderDimension(label, puntaje, feedback) {
@@ -621,7 +683,7 @@ function renderDimension(label, puntaje, feedback) {
   return `
     <div style="background:${bg};padding:0.75rem;border-radius:6px;">
       <div style="font-weight:600;color:${color};margin-bottom:0.25rem;">${label}: ${puntaje ?? '—'}/10</div>
-      <div style="font-size:0.85rem;">${feedback || ''}</div>
+      <div style="font-size:0.85rem;">${renderFeedback(feedback) || ''}</div>
     </div>`;
 }
 

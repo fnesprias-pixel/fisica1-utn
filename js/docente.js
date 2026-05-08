@@ -806,6 +806,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // TAB 6 — ACTIVIDADES
 // =============================================
 
+function insertarEnCursor(textarea, texto) {
+  const start = textarea.selectionStart;
+  const end   = textarea.selectionEnd;
+  textarea.value = textarea.value.slice(0, start) + texto + textarea.value.slice(end);
+  textarea.selectionStart = textarea.selectionEnd = start + texto.length;
+}
+
 function configurarFormularioActividad() {
   const form = document.getElementById('form-actividad');
   const textareaEnunciado = document.getElementById('act-enunciado');
@@ -894,6 +901,40 @@ function configurarFormularioActividad() {
       zonaEl.style.background = '#fef2f2';
     }
   }
+
+  // Pegar imagen dentro del textarea → sube a storage e inserta <img>
+  textareaEnunciado.addEventListener('paste', async (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItem = items.find(it => it.type.startsWith('image/'));
+    if (!imgItem) return; // pegar texto normal: comportamiento por defecto
+    e.preventDefault();
+
+    const archivo = imgItem.getAsFile();
+    const ext = archivo.type.split('/')[1] || 'png';
+    const path = `${perfilDocente.id}/enunciados/${Date.now()}.${ext}`;
+
+    // Indicador visual en el textarea
+    const placeholder = `[subiendo imagen…]`;
+    const inicio = textareaEnunciado.selectionStart;
+    insertarEnCursor(textareaEnunciado, placeholder);
+
+    const { error: uploadError } = await supabase.storage
+      .from('entregas')
+      .upload(path, archivo, { contentType: archivo.type });
+
+    if (uploadError) {
+      textareaEnunciado.value = textareaEnunciado.value.replace(placeholder, '[error al subir imagen]');
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('entregas').getPublicUrl(path);
+    const tag = `<img src="${publicUrl}" style="max-width:100%;border-radius:4px;margin:0.5rem 0;display:block;" />`;
+    textareaEnunciado.value = textareaEnunciado.value.replace(placeholder, tag);
+
+    // Actualizar preview MathJax
+    preview.innerHTML = textareaEnunciado.value;
+    await MathJax.typesetPromise([preview]);
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();

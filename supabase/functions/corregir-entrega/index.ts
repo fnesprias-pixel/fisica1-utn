@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 // Modelo a usar — cambiable sin redeployar seteando la var de entorno MODELO_IA
-const MODELO_DEFAULT = "google/gemini-2.0-flash-001";
+const MODELO_DEFAULT = "google/gemini-2.5-pro-preview";
 
 const SYSTEM_PROMPT = `Sos un asistente de corrección para la materia Física I de la UTN FRBA.
 Tu tarea es corregir el trabajo práctico de un estudiante siguiendo los criterios de la cátedra.

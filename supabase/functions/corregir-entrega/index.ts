@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { jsonrepair } from "npm:jsonrepair";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -165,13 +166,13 @@ Deno.serve(async (req: Request) => {
     const data = await response.json();
     const responseText: string = data.choices?.[0]?.message?.content ?? "";
 
-    // Extraer JSON — busca el primer { y el último } ignorando bloques markdown
+    // Extraer y reparar JSON — la IA a veces genera strings con saltos de línea o comillas sin escapar
     const firstBrace = responseText.indexOf("{");
     const lastBrace  = responseText.lastIndexOf("}");
     if (firstBrace === -1 || lastBrace === -1) {
       throw new Error(`JSON no encontrado. Respuesta: ${responseText.slice(0, 300)}`);
     }
-    const correccion = JSON.parse(responseText.slice(firstBrace, lastBrace + 1));
+    const correccion = JSON.parse(jsonrepair(responseText.slice(firstBrace, lastBrace + 1)));
 
     const primerProblema = correccion.problemas?.[0] ?? null;
     await supabase.from("correcciones").insert({

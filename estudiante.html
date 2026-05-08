@@ -29,6 +29,41 @@
     <div id="lista-unidades" class="lista-unidades">
       <p class="cargando">Cargando unidades…</p>
     </div>
+
+    <hr style="margin:2rem 0;border:none;border-top:2px solid var(--borde);" />
+
+    <!-- ===== SECCIÓN: MIS ENTREGAS ===== -->
+    <h2 style="margin-bottom:1.25rem;">Mis entregas</h2>
+
+    <!-- Formulario de nueva entrega -->
+    <div style="background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.5rem;margin-bottom:1.5rem;">
+      <h3 style="margin-bottom:1rem;">Subir ejercicio resuelto</h3>
+      <form id="form-entrega">
+        <div class="campo">
+          <label for="entrega-titulo">Título (ej: Parcial 1 — Ejercicio 3)</label>
+          <input type="text" id="entrega-titulo" placeholder="Describí brevemente qué ejercicio es" required />
+        </div>
+        <div class="campo">
+          <label for="entrega-descripcion">Comentario opcional</label>
+          <textarea id="entrega-descripcion" placeholder="¿Alguna duda sobre tu resolución?" style="min-height:60px;"></textarea>
+        </div>
+        <div class="campo">
+          <label for="entrega-imagenes">Imágenes (podés seleccionar varias fotos)</label>
+          <input type="file" id="entrega-imagenes" accept="image/*" multiple required />
+          <div id="preview-imagenes" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem;"></div>
+        </div>
+        <div id="error-entrega" class="mensaje-error" hidden></div>
+        <button type="submit" class="btn-primario" id="btn-subir-entrega">Enviar entrega</button>
+      </form>
+    </div>
+
+    <!-- Lista de entregas del estudiante -->
+    <div style="background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.5rem;">
+      <h3 style="margin-bottom:1rem;">Historial de entregas</h3>
+      <div id="lista-mis-entregas">
+        <p class="cargando">Cargando…</p>
+      </div>
+    </div>
   </main>
 
   <!-- Modal cambio de contraseña -->

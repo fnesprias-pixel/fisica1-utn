@@ -29,6 +29,8 @@
       <button class="tab-btn activo" data-tab="tab-contenido">Contenido</button>
       <button class="tab-btn" data-tab="tab-quizzes">Quizzes</button>
       <button class="tab-btn" data-tab="tab-alumnos">Alumnos</button>
+      <button class="tab-btn" data-tab="tab-comisiones">Comisiones</button>
+      <button class="tab-btn" data-tab="tab-entregas">Entregas</button>
     </nav>
 
     <!-- ===== TAB 1: CONTENIDO ===== -->
@@ -153,6 +155,14 @@
       <h2 style="margin-bottom:1.25rem;">Alumnos</h2>
 
       <div style="background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.5rem;">
+        <!-- Filtro por comisión -->
+        <div class="campo" style="max-width:300px;margin-bottom:1rem;">
+          <label for="filtro-comision">Filtrar por comisión</label>
+          <select id="filtro-comision">
+            <option value="">Todas las comisiones</option>
+          </select>
+        </div>
+
         <div class="tabla-wrap">
           <table class="tabla-alumnos">
             <thead>
@@ -160,12 +170,13 @@
                 <th>Nombre</th>
                 <th>Email</th>
                 <th>Legajo</th>
+                <th>Comisión</th>
                 <th>Vistas</th>
                 <th>Promedio quiz</th>
               </tr>
             </thead>
             <tbody id="tbody-alumnos">
-              <tr><td colspan="5" class="cargando">Cargando…</td></tr>
+              <tr><td colspan="6" class="cargando">Cargando…</td></tr>
             </tbody>
           </table>
         </div>
@@ -173,6 +184,31 @@
 
       <!-- Detalle de alumno seleccionado -->
       <div id="detalle-alumno" class="detalle-alumno" hidden></div>
+    </section>
+
+    <!-- ===== TAB 4: COMISIONES ===== -->
+    <section id="tab-comisiones" class="tab-panel">
+      <h2 style="margin-bottom:1.25rem;">Comisiones</h2>
+
+      <!-- Lista de comisiones -->
+      <div id="lista-comisiones" style="display:flex;flex-direction:column;gap:1.25rem;"></div>
+    </section>
+
+    <!-- ===== TAB 5: ENTREGAS ===== -->
+    <section id="tab-entregas" class="tab-panel">
+      <h2 style="margin-bottom:1.25rem;">Entregas de ejercicios</h2>
+
+      <!-- Filtro por comisión -->
+      <div class="campo" style="max-width:300px;margin-bottom:1.25rem;">
+        <label for="filtro-comision-entregas">Comisión</label>
+        <select id="filtro-comision-entregas">
+          <option value="">Todas</option>
+        </select>
+      </div>
+
+      <div id="lista-entregas-docente">
+        <p class="cargando">Cargando entregas…</p>
+      </div>
     </section>
 
   </main>

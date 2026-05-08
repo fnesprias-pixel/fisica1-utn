@@ -128,7 +128,7 @@ Deno.serve(async (req: Request) => {
         "Authorization": `Bearer ${Deno.env.get("OPENROUTER_API_KEY")!}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://fisica1-utn-w59y.vercel.app",
-        "X-Title": "Fisica I UTN — Corrector IA",
+        "X-Title": "Fisica I UTN - Corrector IA",
       },
       body: JSON.stringify({
         model: modelo,
@@ -136,9 +136,8 @@ Deno.serve(async (req: Request) => {
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userContent },
         ],
-        max_tokens: 2048,
+        max_tokens: 8192,
         temperature: 0.3,
-        response_format: { type: "json_object" },
       }),
     });
 
@@ -150,10 +149,13 @@ Deno.serve(async (req: Request) => {
     const data = await response.json();
     const responseText: string = data.choices?.[0]?.message?.content ?? "";
 
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("La respuesta de IA no contiene JSON válido");
-
-    const correccion = JSON.parse(jsonMatch[0]);
+    // Extraer JSON — busca el primer { y el último } ignorando bloques markdown
+    const firstBrace = responseText.indexOf("{");
+    const lastBrace  = responseText.lastIndexOf("}");
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error(`JSON no encontrado. Respuesta: ${responseText.slice(0, 300)}`);
+    }
+    const correccion = JSON.parse(responseText.slice(firstBrace, lastBrace + 1));
 
     await supabase.from("correcciones").insert({
       entrega_id: entregaId,

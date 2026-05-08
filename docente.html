@@ -228,7 +228,15 @@
 
           <div class="campo">
             <label for="act-enunciado">Enunciado (HTML + LaTeX)</label>
-            <textarea id="act-enunciado" rows="6" placeholder="Escribí el enunciado completo. Podés usar HTML y fórmulas LaTeX con \( … \) o \[ … \]" required style="resize:vertical;"></textarea>
+            <!-- Opción rápida: subir foto del enunciado y transcribir con IA -->
+            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+              <input type="file" id="act-img-enunciado" accept="image/*" style="font-size:0.82rem;max-width:260px;" />
+              <button type="button" id="btn-transcribir-enunciado" class="btn-secundario" style="width:auto;font-size:0.82rem;padding:0.3rem 0.75rem;">
+                🤖 Transcribir con IA
+              </button>
+              <span id="transcribir-status" style="font-size:0.78rem;color:var(--texto-suave);display:none;">Procesando…</span>
+            </div>
+            <textarea id="act-enunciado" rows="6" placeholder="Escribí el enunciado, o subí una foto arriba y usá 'Transcribir con IA'." required style="resize:vertical;"></textarea>
           </div>
 
           <div class="campo">

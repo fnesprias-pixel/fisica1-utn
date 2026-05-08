@@ -820,6 +820,44 @@ function configurarFormularioActividad() {
     }, 600);
   });
 
+  // Transcribir imagen de enunciado con IA
+  document.getElementById('btn-transcribir-enunciado').addEventListener('click', async () => {
+    const input = document.getElementById('act-img-enunciado');
+    const status = document.getElementById('transcribir-status');
+    const btn = document.getElementById('btn-transcribir-enunciado');
+
+    if (!input.files?.[0]) { alert('Seleccioná una imagen del enunciado primero.'); return; }
+
+    const archivo = input.files[0];
+    btn.disabled = true;
+    status.style.display = 'inline';
+    status.textContent = 'Procesando…';
+
+    try {
+      const buffer = await archivo.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const base64 = btoa(bytes.reduce((s, b) => s + String.fromCharCode(b), ''));
+      const mime = archivo.type || 'image/jpeg';
+
+      const { data, error } = await supabase.functions.invoke('transcribir-enunciado', {
+        body: { imagen_base64: base64, mime_type: mime },
+      });
+
+      if (error || !data?.enunciado) throw new Error(error?.message || 'Sin respuesta');
+
+      textareaEnunciado.value = data.enunciado;
+      // Disparar preview MathJax
+      preview.innerHTML = data.enunciado;
+      await MathJax.typesetPromise([preview]);
+      status.textContent = '✓ Transcripto';
+      setTimeout(() => { status.style.display = 'none'; }, 2000);
+    } catch (err) {
+      status.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const titulo = document.getElementById('act-titulo').value.trim();

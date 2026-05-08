@@ -17,6 +17,15 @@ async function iniciarDocente() {
   configurarFormularioContenido();
   configurarFormularioQuiz();
   cargarAlumnos();
+
+  // Realtime: cuando una entrega cambia de estado (corrección automática), refrescar la tab si está activa
+  supabase.channel('entrega-updates')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'entregas' }, () => {
+      if (document.getElementById('tab-entregas')?.classList.contains('activo')) {
+        cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
+      }
+    })
+    .subscribe();
 }
 
 // Carga la lista de unidades y puebla los selectores

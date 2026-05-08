@@ -374,7 +374,7 @@ function crearCardEntregaEstudiante(entrega) {
       ${entrega.descripcion ? `<p style="font-size:0.875rem;color:var(--texto-suave);margin:0.5rem 0;">${entrega.descripcion}</p>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">${imagenesHTML}</div>
       ${perfilActual.autocorreccion_ia && entrega.estado === 'pendiente' ? `
-        <button class="btn-primario btn-autocorregir" style="width:auto;margin-top:0.75rem;font-size:0.875rem;">🤖 Corregir con iaNes</button>` : ''}
+        <button class="btn-primario btn-autocorregir" style="width:auto;margin-top:0.75rem;font-size:0.875rem;">🤖 Corrección automática</button>` : ''}
       ${renderCorreccionEstudiante(correccion)}
     </div>
   `;

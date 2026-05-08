@@ -627,8 +627,14 @@ function renderVideosDocente(videos) {
 }
 
 async function iniciarCorreccion(entregaId) {
-  // Marca como "procesando" — la Edge Function de IA se conectará después
-  await supabase.from('entregas').update({ estado: 'procesando' }).eq('id', entregaId);
+  const { error } = await supabase.functions.invoke('corregir-entrega', {
+    body: { entrega_id: entregaId }
+  });
+  if (error) {
+    console.error('Error al corregir:', error);
+    alert('Error al iniciar la corrección. Intentá nuevamente.');
+    await supabase.from('entregas').update({ estado: 'pendiente' }).eq('id', entregaId);
+  }
 }
 
 // Filtro de comisión en entregas

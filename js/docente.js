@@ -820,18 +820,53 @@ function configurarFormularioActividad() {
     }, 600);
   });
 
-  // Transcribir imagen de enunciado con IA
-  document.getElementById('btn-transcribir-enunciado').addEventListener('click', async () => {
-    const input = document.getElementById('act-img-enunciado');
-    const status = document.getElementById('transcribir-status');
-    const btn = document.getElementById('btn-transcribir-enunciado');
+  // Zona de pegado: click abre selector de archivo
+  const zonaEl   = document.getElementById('zona-pegar-enunciado');
+  const inputImg = document.getElementById('act-img-enunciado');
+  const statusEl = document.getElementById('transcribir-status');
+  const previewImg = document.getElementById('preview-img-enunciado');
 
-    if (!input.files?.[0]) { alert('Seleccioná una imagen del enunciado primero.'); return; }
+  zonaEl.addEventListener('click', () => inputImg.click());
+  zonaEl.addEventListener('focus', () => zonaEl.style.borderColor = 'var(--primario)');
+  zonaEl.addEventListener('blur',  () => zonaEl.style.borderColor = 'var(--borde)');
 
-    const archivo = input.files[0];
-    btn.disabled = true;
-    status.style.display = 'inline';
-    status.textContent = 'Procesando…';
+  // Archivo seleccionado con el file picker
+  inputImg.addEventListener('change', () => {
+    if (inputImg.files?.[0]) transcribirImagen(inputImg.files[0]);
+  });
+
+  // Pegar desde portapapeles (Ctrl+V) — funciona aunque el foco esté en cualquier parte del tab
+  document.addEventListener('paste', (e) => {
+    if (!document.getElementById('tab-actividades')?.classList.contains('activo')) return;
+    if (e.target === textareaEnunciado) return; // dejar pegar texto normal en el textarea
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItem = items.find(it => it.type.startsWith('image/'));
+    if (!imgItem) return;
+    e.preventDefault();
+    transcribirImagen(imgItem.getAsFile());
+  });
+
+  // También escuchar paste directo en la zona
+  zonaEl.addEventListener('paste', (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItem = items.find(it => it.type.startsWith('image/'));
+    if (!imgItem) return;
+    e.preventDefault();
+    transcribirImagen(imgItem.getAsFile());
+  });
+
+  async function transcribirImagen(archivo) {
+    if (!archivo) return;
+
+    // Mostrar preview de la imagen pegada
+    previewImg.src = URL.createObjectURL(archivo);
+    previewImg.style.display = 'block';
+    document.getElementById('zona-pegar-texto').style.display = 'none';
+
+    statusEl.style.display = 'inline';
+    statusEl.textContent = '🤖 Transcribiendo…';
+    zonaEl.style.borderColor = 'var(--primario)';
+    zonaEl.style.background = '#f0f9ff';
 
     try {
       const buffer = await archivo.arrayBuffer();
@@ -846,17 +881,19 @@ function configurarFormularioActividad() {
       if (error || !data?.enunciado) throw new Error(error?.message || 'Sin respuesta');
 
       textareaEnunciado.value = data.enunciado;
-      // Disparar preview MathJax
       preview.innerHTML = data.enunciado;
       await MathJax.typesetPromise([preview]);
-      status.textContent = '✓ Transcripto';
-      setTimeout(() => { status.style.display = 'none'; }, 2000);
+
+      statusEl.textContent = '✓ Listo — revisá y ajustá si hace falta';
+      zonaEl.style.borderColor = '#86efac';
+      zonaEl.style.background = '#f0fdf4';
+      textareaEnunciado.focus();
     } catch (err) {
-      status.textContent = 'Error: ' + err.message;
-    } finally {
-      btn.disabled = false;
+      statusEl.textContent = '✗ Error: ' + err.message;
+      zonaEl.style.borderColor = '#fca5a5';
+      zonaEl.style.background = '#fef2f2';
     }
-  });
+  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();

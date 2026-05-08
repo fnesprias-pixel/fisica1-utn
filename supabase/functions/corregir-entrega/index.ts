@@ -110,6 +110,26 @@ Deno.serve(async (req: Request) => {
     const enunciadoDocente: string | null = body.enunciado ?? null;
     const respuestasDocente: string | null = body.respuestas ?? null;
 
+    // Verificar autorización: docente siempre puede; alumno solo si tiene autocorreccion_ia y es su entrega
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
+        const { data: perfil } = await supabase
+          .from("usuarios").select("rol, autocorreccion_ia").eq("id", user.id).single();
+        if (perfil?.rol !== "docente") {
+          const { data: ent } = await supabase
+            .from("entregas").select("usuario_id").eq("id", entregaId).single();
+          if (ent?.usuario_id !== user.id || !perfil?.autocorreccion_ia) {
+            return new Response(JSON.stringify({ error: "No autorizado" }), {
+              status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+      }
+    }
+
     const { data: entrega, error: entregaErr } = await supabase
       .from("entregas")
       .select("*, usuarios(nombre)")

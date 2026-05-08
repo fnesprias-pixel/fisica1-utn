@@ -310,7 +310,7 @@ async function cargarMisEntregas() {
 
   const { data: entregas, error } = await supabase
     .from('entregas')
-    .select('*, correcciones(*)')
+    .select('*, correcciones(*, comentarios_correccion(*))')
     .eq('usuario_id', perfilActual.id)
     .order('created_at', { ascending: false });
 
@@ -373,6 +373,8 @@ function crearCardEntregaEstudiante(entrega) {
       ${estadoBadge}
       ${entrega.descripcion ? `<p style="font-size:0.875rem;color:var(--texto-suave);margin:0.5rem 0;">${entrega.descripcion}</p>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">${imagenesHTML}</div>
+      ${perfilActual.autocorreccion_ia && entrega.estado === 'pendiente' ? `
+        <button class="btn-primario btn-autocorregir" style="width:auto;margin-top:0.75rem;font-size:0.875rem;">🤖 Corregir con iaNes</button>` : ''}
       ${renderCorreccionEstudiante(correccion)}
     </div>
   `;
@@ -385,12 +387,41 @@ function crearCardEntregaEstudiante(entrega) {
     btnMin.textContent = cerrado ? '▲' : '▼';
   });
 
+  div.querySelector('.btn-autocorregir')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = '⏳ Procesando…';
+    await supabase.from('entregas').update({ estado: 'procesando' }).eq('id', entrega.id);
+    supabase.functions.invoke('corregir-entrega', { body: { entrega_id: entrega.id } })
+      .then(() => cargarMisEntregas());
+  });
+
   div.querySelector('.btn-del-card').addEventListener('click', async () => {
     if (!confirm('¿Eliminar esta entrega? No se puede deshacer.')) return;
     await supabase.from('correcciones').delete().eq('entrega_id', entrega.id);
     const { error } = await supabase.from('entregas').delete().eq('id', entrega.id).eq('usuario_id', perfilActual.id);
     if (error) { alert('No se pudo eliminar.'); return; }
     div.remove();
+  });
+
+  div.querySelector('.btn-enviar-comentario')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const textarea = div.querySelector('.txt-nuevo-comentario');
+    const texto = textarea.value.trim();
+    if (!texto) return;
+    btn.disabled = true;
+    const { error } = await supabase.from('comentarios_correccion').insert({
+      correccion_id: btn.dataset.correccion,
+      usuario_id: perfilActual.id,
+      rol: 'estudiante',
+      texto
+    });
+    if (!error) {
+      await cargarMisEntregas();
+    } else {
+      btn.disabled = false;
+      alert('No se pudo enviar el comentario.');
+    }
   });
 
   return div;
@@ -435,7 +466,31 @@ function renderCorreccionEstudiante(correccion) {
       ${cuerpoHTML}
       ${comentarioFinal}
       ${renderVideosSugeridos(correccion.videos_sugeridos)}
+      <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--borde);">
+        ${renderListaComentarios(correccion.comentarios_correccion)}
+        <textarea class="txt-nuevo-comentario" rows="2"
+          placeholder="¿Tenés alguna duda sobre esta corrección? Tu docente puede verlo."
+          style="width:100%;resize:vertical;font-size:0.85rem;padding:0.5rem;border:1px solid var(--borde);border-radius:6px;box-sizing:border-box;"></textarea>
+        <button class="btn-enviar-comentario btn-secundario"
+          data-correccion="${correccion.id}"
+          style="width:auto;margin-top:0.35rem;font-size:0.85rem;padding:0.3rem 0.75rem;">
+          Enviar comentario
+        </button>
+      </div>
     </div>`;
+}
+
+function renderListaComentarios(comentarios) {
+  if (!comentarios?.length) return '';
+  return [...comentarios]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    .map(c => `
+      <div style="padding:0.5rem 0.6rem;background:var(--blanco);border-radius:6px;border:1px solid var(--borde);margin-bottom:0.35rem;">
+        <div style="font-size:0.72rem;color:var(--texto-suave);margin-bottom:0.2rem;">
+          ${new Date(c.created_at).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'})}
+        </div>
+        <div style="font-size:0.875rem;">${c.texto}</div>
+      </div>`).join('');
 }
 
 function renderDimensionEstudiante(label, puntaje, feedback) {

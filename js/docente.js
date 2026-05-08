@@ -320,8 +320,20 @@ async function cargarAlumnos(comisionId = '') {
       <td>${nombreComision}</td>
       <td>${vistas ?? 0}</td>
       <td>${promedio}</td>
+      <td style="text-align:center;">
+        <input type="checkbox" class="toggle-ianes" data-id="${alumno.id}" ${alumno.autocorreccion_ia ? 'checked' : ''}
+          title="Habilitar autocorrección iaNes para este alumno"
+          style="width:1.1rem;height:1.1rem;cursor:pointer;" />
+      </td>
     `;
-    tr.addEventListener('click', () => mostrarDetalleAlumno(alumno));
+    tr.querySelector('.toggle-ianes').addEventListener('change', async (e) => {
+      e.stopPropagation();
+      await supabase.from('usuarios').update({ autocorreccion_ia: e.target.checked }).eq('id', alumno.id);
+    });
+    tr.addEventListener('click', (e) => {
+      if (e.target.classList.contains('toggle-ianes')) return;
+      mostrarDetalleAlumno(alumno);
+    });
     tabla.appendChild(tr);
   }
 }
@@ -551,7 +563,7 @@ async function crearCardEntregaDocente(entrega) {
 
   const { data: corrData } = await supabase
     .from('correcciones')
-    .select('*')
+    .select('*, comentarios_correccion(*)')
     .eq('entrega_id', entrega.id)
     .order('created_at', { ascending: false })
     .limit(1);
@@ -676,6 +688,25 @@ function renderCorreccionDocente(correccion) {
       ${cuerpoHTML}
       ${comentarioFinal}
       ${renderVideosDocente(correccion.videos_sugeridos)}
+      ${renderComentariosDocente(correccion.comentarios_correccion)}
+    </div>`;
+}
+
+function renderComentariosDocente(comentarios) {
+  if (!comentarios?.length) return '';
+  const items = [...comentarios]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    .map(c => `
+      <div style="padding:0.5rem 0.6rem;background:var(--blanco);border-radius:6px;border:1px solid var(--borde);">
+        <div style="font-size:0.72rem;color:var(--texto-suave);margin-bottom:0.2rem;">
+          ${new Date(c.created_at).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'})}
+        </div>
+        <div style="font-size:0.875rem;">${c.texto}</div>
+      </div>`).join('');
+  return `
+    <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--borde);">
+      <div style="font-size:0.75rem;font-weight:600;color:var(--texto-suave);margin-bottom:0.4rem;">💬 Comentarios del alumno</div>
+      <div style="display:flex;flex-direction:column;gap:0.35rem;">${items}</div>
     </div>`;
 }
 

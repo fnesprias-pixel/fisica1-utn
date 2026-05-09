@@ -1079,6 +1079,15 @@ async function crearCardActividad(actividad) {
               <button class="btn-peligro btn-cerrar-act" style="width:auto;font-size:0.875rem;background:none;border:1px solid #fca5a5;color:#991b1b;padding:0.3rem 0.75rem;border-radius:6px;cursor:pointer;">Cerrar actividad</button>` : ''}
           </div>
           <div class="feedback-ia-act" style="display:none;margin-top:0.75rem;padding:0.75rem;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;font-size:0.875rem;"></div>
+
+          <!-- Iteración con IA -->
+          <div style="margin-top:0.75rem;padding:0.75rem;background:#fafafa;border:1px solid var(--borde);border-radius:6px;">
+            <div style="font-size:0.75rem;font-weight:600;color:var(--texto-suave);margin-bottom:0.4rem;">Pedile un cambio a la IA</div>
+            <textarea class="txt-instruccion-ia" rows="2"
+              placeholder='Ej: "Agregá más detalle sobre el DCL del cuerpo 1", "Corregí el resultado de b) incluyendo la verificación dimensional", "Explicá por qué conviene CGS en el análisis inicial"'
+              style="width:100%;resize:vertical;font-size:0.85rem;padding:0.5rem;border:1px solid var(--borde);border-radius:6px;box-sizing:border-box;"></textarea>
+            <button class="btn-secundario btn-iterar-ia" style="width:auto;font-size:0.85rem;margin-top:0.4rem;">🔄 Aplicar con IA</button>
+          </div>
         ` : `
           <div class="resolucion-aprobada preview-mathjax" style="padding:0.75rem;background:var(--fondo);border-radius:6px;font-size:0.875rem;">${renderResolucion(actividad.resolucion_correcta) || '<em style="color:var(--texto-suave);">Sin resolución cargada.</em>'}</div>
         `}
@@ -1228,6 +1237,53 @@ async function crearCardActividad(actividad) {
     feedbackIa.style.background = '#f0fdf4';
     feedbackIa.style.borderColor = '#86efac';
     feedbackIa.innerHTML = renderFeedback(data.feedback.replace(/\n/g, '<br>'));
+  });
+
+  // Iterar resolución con IA
+  card.querySelector('.btn-iterar-ia')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const instruccion = card.querySelector('.txt-instruccion-ia').value.trim();
+    const resolucionActual = txtResolucion.value.trim();
+    if (!instruccion) { alert('Escribí qué querés cambiar o mejorar.'); return; }
+    if (!resolucionActual) { alert('Primero generá o escribí una resolución.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Aplicando…';
+    feedbackIa.style.display = 'none';
+
+    const { data, error } = await supabase.functions.invoke('iterar-resolucion', {
+      body: {
+        enunciado: actividad.enunciado,
+        resolucion_actual: resolucionActual,
+        instruccion,
+      },
+    });
+
+    btn.disabled = false;
+    btn.textContent = '🔄 Aplicar con IA';
+
+    if (error || !data?.resolucion) {
+      feedbackIa.style.display = '';
+      feedbackIa.style.background = '#fef2f2';
+      feedbackIa.style.borderColor = '#fca5a5';
+      feedbackIa.textContent = 'Error al aplicar. Intentá de nuevo.';
+      return;
+    }
+
+    txtResolucion.value = data.resolucion;
+    previewResolucion.innerHTML = renderResolucion(data.resolucion);
+    previewResolucion.style.display = '';
+    await MathJax.typesetPromise([previewResolucion]);
+
+    // Guardar automáticamente el borrador actualizado
+    await supabase.from('actividades').update({ resolucion_borrador: data.resolucion }).eq('id', actividad.id);
+
+    // Limpiar el textarea de instrucción y confirmar
+    card.querySelector('.txt-instruccion-ia').value = '';
+    feedbackIa.style.display = '';
+    feedbackIa.style.background = '#f0fdf4';
+    feedbackIa.style.borderColor = '#86efac';
+    feedbackIa.textContent = '✓ Cambios aplicados y borrador guardado. Podés pedir más cambios o aprobar cuando esté lista.';
   });
 
   // Aprobar y publicar (o actualizar solución publicada)

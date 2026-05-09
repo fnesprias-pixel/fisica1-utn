@@ -608,6 +608,7 @@ function crearCardEntregaEstudiante(entrega) {
     const { error } = await supabase.from('entregas').delete().eq('id', entrega.id).eq('usuario_id', perfilActual.id);
     if (error) { alert('No se pudo eliminar.'); return; }
     div.remove();
+    if (entrega.actividad_id) await cargarActividades();
   });
 
   div.querySelector('.btn-enviar-comentario')?.addEventListener('click', async (e) => {

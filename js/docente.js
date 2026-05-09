@@ -18,9 +18,18 @@ async function iniciarDocente() {
   configurarFormularioQuiz();
   cargarAlumnos();
 
-  // Realtime: cuando una entrega cambia de estado (corrección automática), refrescar la tab si está activa
+  // Realtime: refrescar tab Entregas en UPDATE; auto-corregir en INSERT si es actividad aprobada
   supabase.channel('entrega-updates')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'entregas' }, () => {
+      if (document.getElementById('tab-entregas')?.classList.contains('activo')) {
+        cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
+      }
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'entregas' }, async (payload) => {
+      const ent = payload.new;
+      if (ent?.actividad_id && ent?.estado === 'pendiente') {
+        await iniciarCorreccion(ent.id);
+      }
       if (document.getElementById('tab-entregas')?.classList.contains('activo')) {
         cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
       }
@@ -561,6 +570,12 @@ async function cargarEntregasDocente(comisionId = '') {
   if (error || !entregas?.length) {
     contenedor.innerHTML = '<p class="sin-datos">No hay entregas todavía.</p>';
     return;
+  }
+
+  // Auto-corregir entregas de actividades que quedaron pendientes (docente offline al momento del envío)
+  const pendientesDeActividad = entregas.filter(e => e.actividad_id && e.estado === 'pendiente');
+  for (const ent of pendientesDeActividad) {
+    iniciarCorreccion(ent.id); // fire-and-forget
   }
 
   contenedor.innerHTML = '';

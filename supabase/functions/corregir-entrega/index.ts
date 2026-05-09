@@ -127,8 +127,13 @@ Deno.serve(async (req: Request) => {
           .from("usuarios").select("rol, autocorreccion_ia").eq("id", user.id).single();
         if (perfil?.rol !== "docente") {
           const { data: ent } = await supabase
-            .from("entregas").select("usuario_id").eq("id", entregaId).single();
-          if (ent?.usuario_id !== user.id || !perfil?.autocorreccion_ia) {
+            .from("entregas")
+            .select("usuario_id, actividad_id, actividades(aprobada)")
+            .eq("id", entregaId).single();
+          const esPropia = ent?.usuario_id === user.id;
+          const tieneIa = perfil?.autocorreccion_ia;
+          const esActividadAprobada = (ent?.actividades as { aprobada?: boolean } | null)?.aprobada === true;
+          if (!esPropia || (!tieneIa && !esActividadAprobada)) {
             return new Response(JSON.stringify({ error: "No autorizado" }), {
               status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });

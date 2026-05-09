@@ -1095,10 +1095,21 @@ async function crearCardActividad(actividad) {
     </div>
   `;
 
-  // Render MathJax en el enunciado
+  // Poblar preview de resolución con contenido existente (antes del typesetPromise)
+  const previewResolucionInicial = card.querySelector('.preview-resolucion');
+  if (previewResolucionInicial && actividad.resolucion_borrador) {
+    previewResolucionInicial.innerHTML = renderResolucion(actividad.resolucion_borrador);
+    previewResolucionInicial.style.display = '';
+  }
+
+  // Render MathJax en enunciado + preview de resolución + resolución aprobada
   const enunciadoEl = card.querySelector('.enunciado-act');
   requestAnimationFrame(async () => {
-    await MathJax.typesetPromise([enunciadoEl]);
+    const targets = [enunciadoEl];
+    if (previewResolucionInicial && previewResolucionInicial.innerHTML) targets.push(previewResolucionInicial);
+    const aprobadaEl = card.querySelector('.resolucion-aprobada');
+    if (aprobadaEl) targets.push(aprobadaEl);
+    await MathJax.typesetPromise(targets);
   });
 
   // Minimize/expand

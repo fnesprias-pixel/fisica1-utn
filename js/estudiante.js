@@ -382,18 +382,26 @@ function abrirModalEntregaActividad(actividad, cardOrigen) {
 
       btnEnviar.textContent = 'Guardando…';
 
-      const { error: insertError } = await supabase.from('entregas').insert({
+      const { data: nuevaEntrega, error: insertError } = await supabase.from('entregas').insert({
         usuario_id: perfilActual.id,
         actividad_id: actividad.id,
         titulo: actividad.titulo,
         descripcion: comentario || null,
         imagenes: urls,
         estado: 'pendiente',
-      });
+      }).select('id').single();
 
       if (insertError) throw insertError;
 
       overlay.remove();
+
+      // Auto-corregir con la solución aprobada de la actividad
+      if (nuevaEntrega?.id) {
+        await supabase.from('entregas').update({ estado: 'procesando' }).eq('id', nuevaEntrega.id);
+        supabase.functions.invoke('corregir-entrega', { body: { entrega_id: nuevaEntrega.id } })
+          .then(() => cargarMisEntregas());
+      }
+
       // Refrescar secciones
       await cargarActividades();
       await cargarMisEntregas();

@@ -577,8 +577,10 @@ function crearCardEntregaEstudiante(entrega) {
       ${estadoBadge}
       ${entrega.descripcion ? `<p style="font-size:0.875rem;color:var(--texto-suave);margin:0.5rem 0;">${entrega.descripcion}</p>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">${imagenesHTML}</div>
-      ${perfilActual.autocorreccion_ia && entrega.estado === 'pendiente' ? `
+      ${perfilActual.autocorreccion_ia && entrega.estado === 'pendiente' && !entrega.actividad_id ? `
         <button class="btn-primario btn-autocorregir" style="width:auto;margin-top:0.75rem;font-size:0.875rem;">🤖 Corrección automática</button>` : ''}
+      ${entrega.actividad_id && entrega.estado === 'pendiente' ? `
+        <span style="font-size:0.82rem;color:var(--texto-suave);display:inline-block;margin-top:0.5rem;">⏳ Pendiente de corrección automática…</span>` : ''}
       ${renderCorreccionEstudiante(correccion)}
     </div>
   `;

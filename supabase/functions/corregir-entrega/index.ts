@@ -128,11 +128,22 @@ Deno.serve(async (req: Request) => {
         if (perfil?.rol !== "docente") {
           const { data: ent } = await supabase
             .from("entregas")
-            .select("usuario_id, actividad_id, actividades(aprobada)")
+            .select("usuario_id, actividad_id")
             .eq("id", entregaId).single();
           const esPropia = ent?.usuario_id === user.id;
           const tieneIa = perfil?.autocorreccion_ia;
-          const esActividadAprobada = (ent?.actividades as { aprobada?: boolean } | null)?.aprobada === true;
+
+          // Verificar si la entrega está vinculada a una actividad aprobada
+          let esActividadAprobada = false;
+          if (ent?.actividad_id) {
+            const { data: act } = await supabase
+              .from("actividades")
+              .select("aprobada")
+              .eq("id", ent.actividad_id)
+              .single();
+            esActividadAprobada = act?.aprobada === true;
+          }
+
           if (!esPropia || (!tieneIa && !esActividadAprobada)) {
             return new Response(JSON.stringify({ error: "No autorizado" }), {
               status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },

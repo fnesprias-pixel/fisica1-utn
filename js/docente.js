@@ -614,7 +614,7 @@ async function crearCardEntregaDocente(entrega) {
       <p style="font-weight:600;margin-bottom:0.5rem;">${entrega.titulo}</p>
       ${entrega.descripcion ? `<p style="font-size:0.875rem;color:var(--texto-suave);margin-bottom:0.75rem;">${entrega.descripcion}</p>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">${imagenesHTML}</div>
-      ${entrega.estado === 'pendiente' ? `<button class="btn-primario btn-corregir" data-id="${entrega.id}" style="width:auto;">Corregir con IA</button>` : ''}
+      ${entrega.estado === 'pendiente' ? `<button class="btn-primario btn-corregir" data-id="${entrega.id}" style="width:auto;">${entrega.actividad_id ? 'Corregir' : 'Corregir con IA'}</button>` : ''}
       ${renderCorreccionDocente(correccion)}
     </div>
   `;

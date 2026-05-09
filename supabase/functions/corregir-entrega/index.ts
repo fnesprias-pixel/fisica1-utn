@@ -114,8 +114,8 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     entregaId = body.entrega_id;
     if (!entregaId) throw new Error("entrega_id requerido");
-    const enunciadoDocente: string | null = body.enunciado ?? null;
-    const respuestasDocente: string | null = body.respuestas ?? null;
+    let enunciadoDocente: string | null = body.enunciado ?? null;
+    let respuestasDocente: string | null = body.respuestas ?? null;
 
     // Verificar autorización: docente siempre puede; alumno solo si tiene autocorreccion_ia y es su entrega
     const authHeader = req.headers.get("Authorization");

@@ -47,7 +47,8 @@ REGLAS OBLIGATORIAS DE CORRECCIÓN:
    NUNCA le pidas al alumno que escriba en negrita — la notación correcta en papel es la flecha sobre la letra.
 
 3. CONSTANTE GRAVITATORIA
-   Usar g ≈ 10 m/s² salvo que el problema indique otro valor.
+   La cátedra usa g = 10 m/s² salvo que el problema indique otro valor.
+   Si el alumno usó g = 9.8 m/s² (u otro valor razonable) y su desarrollo es internamente consistente con ese valor, NO se considera un error — hacé una observación breve al pasar ("la cátedra trabaja con g = 10 m/s²") sin descontar puntaje ni hacer de eso el eje del feedback.
 
 4. NOTACIÓN DE SUBÍNDICES Y SUPERÍNDICES
    En tu feedback usá siempre _{x} para subíndices y ^{x} para superíndices, con llaves obligatorias.

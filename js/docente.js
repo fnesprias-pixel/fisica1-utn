@@ -3,6 +3,7 @@
 let perfilDocente = null;
 let unidades = [];
 let comisiones = [];
+let _recargandoEntregas = false;
 
 async function iniciarDocente() {
   const resultado = await verificarRol('docente');
@@ -550,6 +551,8 @@ async function renderAsignaciones(card, comisionId) {
 // =============================================
 
 async function cargarEntregasDocente(comisionId = '') {
+  if (_recargandoEntregas) return;
+  _recargandoEntregas = true;
   const contenedor = document.getElementById('lista-entregas-docente');
   contenedor.innerHTML = '<p class="cargando">Cargando entregas…</p>';
 
@@ -569,18 +572,22 @@ async function cargarEntregasDocente(comisionId = '') {
 
   if (error || !entregas?.length) {
     contenedor.innerHTML = '<p class="sin-datos">No hay entregas todavía.</p>';
+    _recargandoEntregas = false;
     return;
-  }
-
-  // Auto-corregir entregas de actividades que quedaron pendientes (docente offline al momento del envío)
-  const pendientesDeActividad = entregas.filter(e => e.actividad_id && e.estado === 'pendiente');
-  for (const ent of pendientesDeActividad) {
-    iniciarCorreccion(ent.id); // fire-and-forget
   }
 
   contenedor.innerHTML = '';
   for (const entrega of entregas) {
     contenedor.appendChild(await crearCardEntregaDocente(entrega));
+  }
+
+  _recargandoEntregas = false;
+
+  // Auto-corregir entregas de actividades que quedaron pendientes (docente offline al momento del envío)
+  // Se hace DESPUÉS de renderizar para no bloquear la UI
+  const pendientesDeActividad = entregas.filter(e => e.actividad_id && e.estado === 'pendiente');
+  for (const ent of pendientesDeActividad) {
+    iniciarCorreccion(ent.id); // fire-and-forget; el Realtime UPDATE refresca la lista al terminar
   }
 }
 
@@ -797,7 +804,7 @@ function mostrarModalCorreccion(tituloEntrega, onConfirmar) {
 
 async function iniciarCorreccion(entregaId, enunciado = null, respuestas = null) {
   await supabase.from('entregas').update({ estado: 'procesando' }).eq('id', entregaId);
-  await cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
+  // No recargamos la lista acá: el listener Realtime de UPDATE lo hace automáticamente
 
   const body = { entrega_id: entregaId };
   if (enunciado) body.enunciado = enunciado;
@@ -805,8 +812,12 @@ async function iniciarCorreccion(entregaId, enunciado = null, respuestas = null)
 
   supabase.functions.invoke('corregir-entrega', { body })
     .then(({ error }) => {
-      if (error) console.error('Error en corrección IA:', error);
-      cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
+      if (error) {
+        console.error('Error en corrección IA:', error);
+        // Si falló, recargar para mostrar el estado real
+        cargarEntregasDocente(document.getElementById('filtro-comision-entregas').value);
+      }
+      // Si ok: el UPDATE a 'corregida' dispara el listener Realtime
     });
 }
 

@@ -806,6 +806,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // TAB 6 — ACTIVIDADES
 // =============================================
 
+// Convierte **markdown bold** a <strong> sin tocar LaTeX (MathJax maneja el resto)
+function renderResolucion(text) {
+  if (!text) return '';
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
 function insertarEnCursor(textarea, texto) {
   const start = textarea.selectionStart;
   const end   = textarea.selectionEnd;
@@ -1057,7 +1063,7 @@ async function crearCardActividad(actividad) {
           </div>
           <div class="feedback-ia-act" style="display:none;margin-top:0.75rem;padding:0.75rem;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;font-size:0.875rem;"></div>
         ` : `
-          <div style="padding:0.75rem;background:var(--fondo);border-radius:6px;font-size:0.875rem;">${actividad.resolucion_correcta || '<em style="color:var(--texto-suave);">Sin resolución cargada.</em>'}</div>
+          <div class="resolucion-aprobada preview-mathjax" style="padding:0.75rem;background:var(--fondo);border-radius:6px;font-size:0.875rem;">${renderResolucion(actividad.resolucion_correcta) || '<em style="color:var(--texto-suave);">Sin resolución cargada.</em>'}</div>
         `}
 
         ${actividad.aprobada && actividad.resolucion_correcta ? `
@@ -1106,7 +1112,7 @@ async function crearCardActividad(actividad) {
     clearTimeout(timerResolucion);
     timerResolucion = setTimeout(async () => {
       if (txtResolucion.value.trim()) {
-        previewResolucion.innerHTML = txtResolucion.value;
+        previewResolucion.innerHTML = renderResolucion(txtResolucion.value);
         previewResolucion.style.display = '';
         await MathJax.typesetPromise([previewResolucion]);
       } else {
@@ -1141,7 +1147,7 @@ async function crearCardActividad(actividad) {
     }
 
     txtResolucion.value = data.resolucion;
-    previewResolucion.innerHTML = data.resolucion;
+    previewResolucion.innerHTML = renderResolucion(data.resolucion);
     previewResolucion.style.display = '';
     await MathJax.typesetPromise([previewResolucion]);
 

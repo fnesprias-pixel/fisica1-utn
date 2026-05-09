@@ -663,15 +663,10 @@ function renderCorreccionEstudiante(correccion) {
     `;
   }
 
-  const comentarioFinal = correccion.comentario_general
-    ? `<p style="font-size:0.875rem;margin-top:0.75rem;${problemas ? 'padding-top:0.75rem;border-top:1px solid var(--borde);' : ''}"><strong>Comentario:</strong> ${renderFeedback(correccion.comentario_general)}</p>`
-    : '';
-
   return `
     <div style="margin-top:1rem;padding:1rem;background:var(--fondo);border-radius:8px;border-left:4px solid var(--primario);">
       <h4 style="margin-bottom:0.75rem;">Tu corrección</h4>
       ${cuerpoHTML}
-      ${comentarioFinal}
       ${renderVideosSugeridos(correccion.videos_sugeridos)}
       <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--borde);">
         ${renderListaComentarios(correccion.comentarios_correccion)}

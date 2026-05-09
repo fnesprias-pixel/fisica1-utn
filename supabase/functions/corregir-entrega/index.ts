@@ -93,7 +93,6 @@ Respondé ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin
       "comentario": "<síntesis del trabajo en este problema>"
     }
   ],
-  "comentario_general": "<síntesis global, refuerzo positivo y próximos pasos>",
   "videos_sugeridos": []
 }
 Si hay un solo ejercicio, el array "problemas" tiene un único elemento.`;
@@ -234,7 +233,7 @@ Deno.serve(async (req: Request) => {
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userContent },
         ],
-        max_tokens: 8192,
+        max_tokens: 4096,
         temperature: 0.3,
       }),
     });
@@ -268,7 +267,6 @@ Deno.serve(async (req: Request) => {
       resultado_puntaje: primerProblema?.resultado_puntaje ?? null,
       resultado_feedback: primerProblema?.resultado_feedback ?? null,
       videos_sugeridos: correccion.videos_sugeridos ?? [],
-      comentario_general: correccion.comentario_general,
     });
 
     await supabase.from("entregas").update({ estado: "corregida" }).eq("id", entregaId);

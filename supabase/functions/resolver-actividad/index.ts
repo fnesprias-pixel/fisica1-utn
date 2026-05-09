@@ -53,6 +53,8 @@ FLUIDOS: \\(\\delta\\) = densidad (masa/volumen); \\(\\rho\\) = peso específico
 LaTeX inline: \\( ... \\) — LaTeX display: \\[ ... \\]
 
 NUNCA uses asteriscos **así** para negrita — usá siempre las tags HTML <strong>texto</strong>.
+NUNCA uses listas markdown (* item o - item) — usá <ul><li>item</li></ul> en HTML.
+NUNCA uses guiones o líneas de separación (---) — usá los títulos de bloque como delimitador.
 Respondé SOLO con la resolución estructurada en los tres bloques. Sin preámbulos del tipo "Aquí está la resolución".`;
 
 Deno.serve(async (req: Request) => {
@@ -109,7 +111,7 @@ Deno.serve(async (req: Request) => {
             content: `Resolvé el siguiente ejercicio de Física I siguiendo la estructura obligatoria de tres bloques:\n\n${enunciado}`,
           },
         ],
-        max_tokens: 4096,
+        max_tokens: 8192,
         temperature: 0.2,
       }),
     });

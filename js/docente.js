@@ -806,10 +806,27 @@ document.addEventListener('DOMContentLoaded', () => {
 // TAB 6 — ACTIVIDADES
 // =============================================
 
-// Convierte **markdown bold** a <strong> sin tocar LaTeX (MathJax maneja el resto)
+// Convierte markdown a HTML sin tocar LaTeX (MathJax procesa \(...\) y \[...\])
 function renderResolucion(text) {
   if (!text) return '';
-  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  const lines = text.split('\n');
+  const out = [];
+  let inList = false;
+
+  for (const line of lines) {
+    const bulletMatch = line.match(/^[\*\-] (.+)$/);
+    if (bulletMatch) {
+      if (!inList) { out.push('<ul style="margin:0.3rem 0 0.3rem 1.5rem;padding:0;">'); inList = true; }
+      out.push('<li>' + bulletMatch[1] + '</li>');
+    } else {
+      if (inList) { out.push('</ul>'); inList = false; }
+      out.push(line);
+    }
+  }
+  if (inList) out.push('</ul>');
+
+  return out.join('\n')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
 function insertarEnCursor(textarea, texto) {

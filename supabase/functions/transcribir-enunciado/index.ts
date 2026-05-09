@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MODELO_DEFAULT = "google/gemini-2.5-pro-preview";
+const MODELO_DEFAULT = "qwen/qwen2.5-vl-72b-instruct";
 
 const SYSTEM_PROMPT = `Sos un asistente que convierte imágenes de enunciados de física a texto HTML con fórmulas LaTeX.
 
@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
     const { imagen_base64, mime_type } = body;
     if (!imagen_base64 || !mime_type) throw new Error("imagen_base64 y mime_type son requeridos");
 
-    const modelo = Deno.env.get("MODELO_IA") ?? MODELO_DEFAULT;
+    const modelo = Deno.env.get("MODELO_IA_VISION") ?? MODELO_DEFAULT;
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",

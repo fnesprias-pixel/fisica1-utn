@@ -5,6 +5,52 @@ let unidades = [];
 let comisiones = [];
 let _recargandoEntregas = false;
 const _correccionesEnProceso = new Set();
+const _correccionesDoc = new Map(); // id → { correccion, nombre, titulo, fecha }
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+function descargarCorreccionDoc(id) {
+  const ctx = _correccionesDoc.get(id);
+  if (!ctx) return;
+  const { correccion, nombre, titulo, fecha } = ctx;
+  const linea = '═'.repeat(50);
+  const sep   = '─'.repeat(50);
+  let txt = `CORRECCIÓN — Física I UTN FRBA\n${linea}\nAlumno: ${nombre}\nEntrega: ${titulo}\nFecha: ${fecha}\n\n`;
+
+  const problemas = correccion.problemas?.length ? correccion.problemas : null;
+  if (problemas) {
+    problemas.forEach((p, i) => {
+      if (i > 0) txt += `\n${sep}\n\n`;
+      txt += `PROBLEMA ${p.numero || (i + 1)}${p.titulo ? ' — ' + p.titulo : ''}\n${sep}\n`;
+      if (p.interpretacion_enunciado) txt += `\nInterpretación del enunciado:\n${stripHtml(p.interpretacion_enunciado)}\n`;
+      txt += `\nPLANTEAMIENTO: ${p.planteamiento_puntaje ?? '—'}/10\n${stripHtml(p.planteamiento_feedback || '')}\n`;
+      txt += `\nPROCEDIMIENTO: ${p.procedimiento_puntaje ?? '—'}/10\n${stripHtml(p.procedimiento_feedback || '')}\n`;
+      txt += `\nRESULTADO: ${p.resultado_puntaje ?? '—'}/10\n${stripHtml(p.resultado_feedback || '')}\n`;
+      if (p.comentario) txt += `\nComentario: ${stripHtml(p.comentario)}\n`;
+    });
+  } else {
+    if (correccion.interpretacion_enunciado) txt += `Interpretación del enunciado:\n${stripHtml(correccion.interpretacion_enunciado)}\n\n`;
+    txt += `PLANTEAMIENTO: ${correccion.planteamiento_puntaje ?? '—'}/10\n${stripHtml(correccion.planteamiento_feedback || '')}\n\n`;
+    txt += `PROCEDIMIENTO: ${correccion.procedimiento_puntaje ?? '—'}/10\n${stripHtml(correccion.procedimiento_feedback || '')}\n\n`;
+    txt += `RESULTADO: ${correccion.resultado_puntaje ?? '—'}/10\n${stripHtml(correccion.resultado_feedback || '')}\n`;
+  }
+  if (correccion.videos_sugeridos?.length) {
+    txt += `\n${sep}\nVIDEOS SUGERIDOS:\n`;
+    correccion.videos_sugeridos.forEach(v => { txt += `- ${v.titulo}: ${v.url}\n`; });
+  }
+
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `correccion_${nombre.replace(/\s+/g, '_')}_${fecha.replace(/\//g, '-')}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 async function iniciarDocente() {
   const resultado = await verificarRol('docente');
@@ -564,6 +610,7 @@ async function cargarEntregasDocente(comisionId = '', autoCorregir = true) {
       *,
       usuarios!inner(nombre, email, comision_id, comisiones(nombre))
     `)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
   if (comisionId) {
@@ -640,7 +687,7 @@ async function crearCardEntregaDocente(entrega) {
       ${entrega.descripcion ? `<p style="font-size:0.875rem;color:var(--texto-suave);margin-bottom:0.75rem;">${entrega.descripcion}</p>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">${imagenesHTML}</div>
       ${entrega.estado === 'pendiente' ? `<button class="btn-primario btn-corregir" data-id="${entrega.id}" style="width:auto;">${entrega.actividad_id ? 'Corregir' : 'Corregir con IA'}</button>` : ''}
-      ${renderCorreccionDocente(correccion)}
+      ${renderCorreccionDocente(correccion, alumno?.nombre || '—', entrega.titulo, fecha)}
     </div>
   `;
 
@@ -653,9 +700,8 @@ async function crearCardEntregaDocente(entrega) {
   });
 
   card.querySelector('.btn-del-card').addEventListener('click', async () => {
-    if (!confirm(`¿Eliminar la entrega de ${alumno?.nombre || 'este alumno'}? No se puede deshacer.`)) return;
-    await supabase.from('correcciones').delete().eq('entrega_id', entrega.id);
-    const { error } = await supabase.from('entregas').delete().eq('id', entrega.id);
+    if (!confirm(`¿Eliminar la entrega de ${alumno?.nombre || 'este alumno'}? La corrección quedará guardada en el sistema.`)) return;
+    const { error } = await supabase.from('entregas').update({ deleted_at: new Date().toISOString() }).eq('id', entrega.id);
     if (error) { alert('No se pudo eliminar.'); return; }
     card.remove();
   });
@@ -691,8 +737,10 @@ function renderInterpretacion(texto) {
     </div>`;
 }
 
-function renderCorreccionDocente(correccion) {
+function renderCorreccionDocente(correccion, nombre, titulo, fecha) {
   if (!correccion) return '';
+  _correccionesDoc.set(correccion.id, { correccion, nombre, titulo, fecha });
+
   const problemas = correccion.problemas?.length ? correccion.problemas : null;
 
   let cuerpoHTML = '';
@@ -724,7 +772,10 @@ function renderCorreccionDocente(correccion) {
 
   return `
     <div style="margin-top:1rem;padding:1rem;background:var(--fondo);border-radius:8px;border-left:4px solid var(--primario);">
-      <h4 style="margin-bottom:0.75rem;">Corrección IA</h4>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <h4 style="margin:0;">Corrección IA</h4>
+        <button onclick="descargarCorreccionDoc('${correccion.id}')" style="background:none;border:1px solid var(--borde);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.78rem;color:var(--texto-suave);" title="Descargar corrección como texto">⬇ Descargar</button>
+      </div>
       ${cuerpoHTML}
       ${renderVideosDocente(correccion.videos_sugeridos)}
       ${renderComentariosDocente(correccion.comentarios_correccion)}
@@ -1053,7 +1104,8 @@ async function crearCardActividad(actividad) {
   const { count: cantEntregas } = await supabase
     .from('entregas')
     .select('*', { count: 'exact', head: true })
-    .eq('actividad_id', actividad.id);
+    .eq('actividad_id', actividad.id)
+    .is('deleted_at', null);
 
   const card = document.createElement('div');
   card.style.cssText = 'background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.25rem;margin-bottom:1.25rem;';

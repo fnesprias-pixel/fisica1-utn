@@ -1,6 +1,51 @@
 // Lógica del panel del estudiante
 
 let perfilActual = null;
+const _correccionesEst = new Map(); // id → { correccion, titulo, fecha }
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+function descargarCorreccionEst(id) {
+  const ctx = _correccionesEst.get(id);
+  if (!ctx) return;
+  const { correccion, titulo, fecha } = ctx;
+  const nombre = perfilActual?.nombre || '';
+  const linea = '═'.repeat(50);
+  const sep   = '─'.repeat(50);
+  let txt = `CORRECCIÓN — Física I UTN FRBA\n${linea}\nAlumno: ${nombre}\nEntrega: ${titulo}\nFecha: ${fecha}\n\n`;
+
+  const problemas = correccion.problemas?.length ? correccion.problemas : null;
+  if (problemas) {
+    problemas.forEach((p, i) => {
+      if (i > 0) txt += `\n${sep}\n\n`;
+      txt += `PROBLEMA ${p.numero || (i + 1)}${p.titulo ? ' — ' + p.titulo : ''}\n${sep}\n`;
+      txt += `\nPLANTEAMIENTO: ${p.planteamiento_puntaje ?? '—'}/10\n${stripHtml(p.planteamiento_feedback || '')}\n`;
+      txt += `\nPROCEDIMIENTO: ${p.procedimiento_puntaje ?? '—'}/10\n${stripHtml(p.procedimiento_feedback || '')}\n`;
+      txt += `\nRESULTADO: ${p.resultado_puntaje ?? '—'}/10\n${stripHtml(p.resultado_feedback || '')}\n`;
+      if (p.comentario) txt += `\nComentario: ${stripHtml(p.comentario)}\n`;
+    });
+  } else {
+    txt += `PLANTEAMIENTO: ${correccion.planteamiento_puntaje ?? '—'}/10\n${stripHtml(correccion.planteamiento_feedback || '')}\n\n`;
+    txt += `PROCEDIMIENTO: ${correccion.procedimiento_puntaje ?? '—'}/10\n${stripHtml(correccion.procedimiento_feedback || '')}\n\n`;
+    txt += `RESULTADO: ${correccion.resultado_puntaje ?? '—'}/10\n${stripHtml(correccion.resultado_feedback || '')}\n`;
+  }
+  if (correccion.videos_sugeridos?.length) {
+    txt += `\n${sep}\nVIDEOS SUGERIDOS:\n`;
+    correccion.videos_sugeridos.forEach(v => { txt += `- ${v.titulo}: ${v.url}\n`; });
+  }
+
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mi_correccion_${titulo.replace(/\s+/g, '_').slice(0, 30)}_${fecha.replace(/\//g, '-')}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 async function iniciarEstudiante() {
   const resultado = await verificarRol('estudiante');
@@ -243,7 +288,8 @@ async function cargarActividades() {
     .from('entregas')
     .select('actividad_id, estado')
     .eq('usuario_id', perfilActual.id)
-    .not('actividad_id', 'is', null);
+    .not('actividad_id', 'is', null)
+    .is('deleted_at', null);
 
   const entregasPorActividad = {};
   (misEntregas || []).forEach(e => { entregasPorActividad[e.actividad_id] = e.estado; });
@@ -512,6 +558,7 @@ async function cargarMisEntregas() {
     .from('entregas')
     .select('*, correcciones(*, comentarios_correccion(*)), actividades(titulo)')
     .eq('usuario_id', perfilActual.id)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
   if (error || !entregas?.length) {
@@ -581,7 +628,7 @@ function crearCardEntregaEstudiante(entrega) {
         <button class="btn-primario btn-autocorregir" style="width:auto;margin-top:0.75rem;font-size:0.875rem;">🤖 Corrección automática</button>` : ''}
       ${entrega.actividad_id && entrega.estado === 'pendiente' ? `
         <span style="font-size:0.82rem;color:var(--texto-suave);display:inline-block;margin-top:0.5rem;">⏳ Pendiente de corrección automática…</span>` : ''}
-      ${renderCorreccionEstudiante(correccion)}
+      ${renderCorreccionEstudiante(correccion, entrega.titulo, fecha)}
     </div>
   `;
 
@@ -603,9 +650,8 @@ function crearCardEntregaEstudiante(entrega) {
   });
 
   div.querySelector('.btn-del-card').addEventListener('click', async () => {
-    if (!confirm('¿Eliminar esta entrega? No se puede deshacer.')) return;
-    await supabase.from('correcciones').delete().eq('entrega_id', entrega.id);
-    const { error } = await supabase.from('entregas').delete().eq('id', entrega.id).eq('usuario_id', perfilActual.id);
+    if (!confirm('¿Eliminar esta entrega? La corrección quedará guardada en el sistema.')) return;
+    const { error } = await supabase.from('entregas').update({ deleted_at: new Date().toISOString() }).eq('id', entrega.id).eq('usuario_id', perfilActual.id);
     if (error) { alert('No se pudo eliminar.'); return; }
     div.remove();
     if (entrega.actividad_id) await cargarActividades();
@@ -634,8 +680,10 @@ function crearCardEntregaEstudiante(entrega) {
   return div;
 }
 
-function renderCorreccionEstudiante(correccion) {
+function renderCorreccionEstudiante(correccion, titulo, fecha) {
   if (!correccion) return '';
+  _correccionesEst.set(correccion.id, { correccion, titulo, fecha });
+
   const problemas = correccion.problemas?.length ? correccion.problemas : null;
 
   let cuerpoHTML = '';
@@ -665,7 +713,10 @@ function renderCorreccionEstudiante(correccion) {
 
   return `
     <div style="margin-top:1rem;padding:1rem;background:var(--fondo);border-radius:8px;border-left:4px solid var(--primario);">
-      <h4 style="margin-bottom:0.75rem;">Tu corrección</h4>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <h4 style="margin:0;">Tu corrección</h4>
+        <button onclick="descargarCorreccionEst('${correccion.id}')" style="background:none;border:1px solid var(--borde);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.78rem;color:var(--texto-suave);" title="Descargar corrección como texto">⬇ Descargar</button>
+      </div>
       ${cuerpoHTML}
       ${renderVideosSugeridos(correccion.videos_sugeridos)}
       <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--borde);">

@@ -16,7 +16,7 @@ function descargarCorreccionEst(id) {
   const nombre = perfilActual?.nombre || '';
   const linea = '═'.repeat(50);
   const sep   = '─'.repeat(50);
-  let txt = `CORRECCIÓN — Física I UTN FRBA\n${linea}\nAlumno: ${nombre}\nEntrega: ${titulo}\nFecha: ${fecha}\n\n`;
+  let txt = `CORRECCIÓN — Física I UTN FRBA | Prof. Francisco Nesprías\n${linea}\nAlumno: ${nombre}\nEntrega: ${titulo}\nFecha: ${fecha}\n\n`;
 
   const problemas = correccion.problemas?.length ? correccion.problemas : null;
   if (problemas) {

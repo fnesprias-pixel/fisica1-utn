@@ -636,7 +636,7 @@ function crearCardEntregaEstudiante(entrega) {
       <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
         <span style="font-size:0.8rem;color:var(--texto-suave);">${fecha}</span>
         <button class="btn-min-card" style="background:none;border:1px solid var(--borde);border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:var(--texto-suave);" title="Minimizar">▲</button>
-        <button class="btn-del-card" style="background:none;border:1px solid #fca5a5;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:#991b1b;" title="Eliminar">✕</button>
+        <button class="btn-rehacer-card" style="background:none;border:1px solid #bfdbfe;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:#1d4ed8;" title="Rehacer entrega">↩ Rehacer</button>
       </div>
     </div>
     <div class="card-cuerpo-entrega">
@@ -668,12 +668,16 @@ function crearCardEntregaEstudiante(entrega) {
       .then(() => cargarMisEntregas());
   });
 
-  div.querySelector('.btn-del-card').addEventListener('click', async () => {
-    if (!confirm('¿Eliminar esta entrega? La corrección quedará guardada en el sistema.')) return;
-    const { error } = await supabase.from('entregas').update({ deleted_at: new Date().toISOString() }).eq('id', entrega.id).eq('usuario_id', perfilActual.id);
-    if (error) { alert('No se pudo eliminar.'); return; }
-    div.remove();
-    if (entrega.actividad_id) await cargarActividades();
+  div.querySelector('.btn-rehacer-card').addEventListener('click', () => {
+    if (entrega.actividad_id) {
+      const actividad = { id: entrega.actividad_id, titulo: entrega.actividades?.titulo || entrega.titulo };
+      abrirModalEntregaActividad(actividad, null);
+    } else {
+      document.getElementById('entrega-titulo').value = entrega.titulo;
+      document.getElementById('entrega-descripcion').value = entrega.descripcion || '';
+      document.getElementById('form-entrega').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('entrega-imagenes').focus();
+    }
   });
 
   div.querySelector('.btn-enviar-comentario')?.addEventListener('click', async (e) => {

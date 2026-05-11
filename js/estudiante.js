@@ -3,48 +3,67 @@
 let perfilActual = null;
 const _correccionesEst = new Map(); // id → { correccion, titulo, fecha }
 
-function stripHtml(html) {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || '';
-}
-
 function descargarCorreccionEst(id) {
   const ctx = _correccionesEst.get(id);
   if (!ctx) return;
   const { correccion, titulo, fecha } = ctx;
   const nombre = perfilActual?.nombre || '';
-  const linea = '═'.repeat(50);
-  const sep   = '─'.repeat(50);
-  let txt = `CORRECCIÓN — Física I UTN FRBA | Prof. Francisco Nesprías\n${linea}\nAlumno: ${nombre}\nEntrega: ${titulo}\nFecha: ${fecha}\n\n`;
+
+  function dimCls(p) { return p >= 7 ? 'ok' : p >= 4 ? 'warn' : 'err'; }
+  function dimBg(p)  { return p >= 7 ? 'dim-ok' : p >= 4 ? 'dim-warn' : 'dim-err'; }
+  function renderDimP(label, puntaje, feedback) {
+    return `<div class="dim ${dimBg(puntaje)}"><div class="dim-lbl ${dimCls(puntaje)}">${label}: ${puntaje ?? '—'}/10</div><div>${renderFeedback(feedback || '')}</div></div>`;
+  }
 
   const problemas = correccion.problemas?.length ? correccion.problemas : null;
+  let cuerpoHTML = '';
   if (problemas) {
-    problemas.forEach((p, i) => {
-      if (i > 0) txt += `\n${sep}\n\n`;
-      txt += `PROBLEMA ${p.numero || (i + 1)}${p.titulo ? ' — ' + p.titulo : ''}\n${sep}\n`;
-      txt += `\nPLANTEAMIENTO: ${p.planteamiento_puntaje ?? '—'}/10\n${stripHtml(p.planteamiento_feedback || '')}\n`;
-      txt += `\nPROCEDIMIENTO: ${p.procedimiento_puntaje ?? '—'}/10\n${stripHtml(p.procedimiento_feedback || '')}\n`;
-      txt += `\nRESULTADO: ${p.resultado_puntaje ?? '—'}/10\n${stripHtml(p.resultado_feedback || '')}\n`;
-      if (p.comentario) txt += `\nComentario: ${stripHtml(p.comentario)}\n`;
-    });
+    cuerpoHTML = problemas.map((p, i) => `
+      ${i > 0 ? '<hr class="sep">' : ''}
+      <h2>Problema ${p.numero || (i + 1)}${p.titulo ? ' — ' + p.titulo : ''}</h2>
+      ${renderDimP('Planteamiento', p.planteamiento_puntaje, p.planteamiento_feedback)}
+      ${renderDimP('Procedimiento', p.procedimiento_puntaje, p.procedimiento_feedback)}
+      ${renderDimP('Resultado', p.resultado_puntaje, p.resultado_feedback)}
+      ${p.comentario ? `<p class="coment"><strong>Comentario:</strong> ${renderFeedback(p.comentario)}</p>` : ''}
+    `).join('');
   } else {
-    txt += `PLANTEAMIENTO: ${correccion.planteamiento_puntaje ?? '—'}/10\n${stripHtml(correccion.planteamiento_feedback || '')}\n\n`;
-    txt += `PROCEDIMIENTO: ${correccion.procedimiento_puntaje ?? '—'}/10\n${stripHtml(correccion.procedimiento_feedback || '')}\n\n`;
-    txt += `RESULTADO: ${correccion.resultado_puntaje ?? '—'}/10\n${stripHtml(correccion.resultado_feedback || '')}\n`;
-  }
-  if (correccion.videos_sugeridos?.length) {
-    txt += `\n${sep}\nVIDEOS SUGERIDOS:\n`;
-    correccion.videos_sugeridos.forEach(v => { txt += `- ${v.titulo}: ${v.url}\n`; });
+    cuerpoHTML = `
+      ${renderDimP('Planteamiento', correccion.planteamiento_puntaje, correccion.planteamiento_feedback)}
+      ${renderDimP('Procedimiento', correccion.procedimiento_puntaje, correccion.procedimiento_feedback)}
+      ${renderDimP('Resultado', correccion.resultado_puntaje, correccion.resultado_feedback)}
+    `;
   }
 
-  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `mi_correccion_${titulo.replace(/\s+/g, '_').slice(0, 30)}_${fecha.replace(/\//g, '-')}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const videosHTML = correccion.videos_sugeridos?.length
+    ? `<div class="videos"><strong>📺 Videos para repasar:</strong><ul>${correccion.videos_sugeridos.map(v => `<li><a href="${v.url}">${v.titulo}</a></li>`).join('')}</ul></div>`
+    : '';
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Mi corrección — ${titulo}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;max-width:750px;margin:2rem auto;padding:1rem;color:#111;line-height:1.65;font-size:15px}
+h1{font-size:1.3rem;margin-bottom:.2rem}
+.meta{color:#555;font-size:.875rem;margin-bottom:1.25rem;border-bottom:2px solid #003087;padding-bottom:.75rem}
+h2{font-size:1.05rem;color:#003087;margin:1.25rem 0 .75rem}
+.dim{padding:.65rem .75rem;border-radius:6px;margin-bottom:.45rem}
+.dim-ok{background:#d1fae5}.dim-warn{background:#fef3c7}.dim-err{background:#fee2e2}
+.dim-lbl{font-weight:700;margin-bottom:.2rem}
+.dim-lbl.ok{color:#065f46}.dim-lbl.warn{color:#92400e}.dim-lbl.err{color:#991b1b}
+.sep{border:none;border-top:1px solid #ddd;margin:1.25rem 0}
+.coment{margin-top:.65rem;font-size:.9rem}
+.videos{margin-top:1rem;font-size:.9rem}.videos ul{margin:.25rem 0 0 1.25rem}
+a{color:#003087}sup,sub{font-size:.78em}
+.btn{display:block;margin:1.5rem auto 0;padding:.5rem 1.5rem;background:#003087;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.95rem}
+@media print{.btn{display:none}}
+</style></head><body>
+<h1>Mi corrección — Física I UTN FRBA</h1>
+<div class="meta"><strong>Prof. Francisco Nesprías</strong><br>Alumno: ${nombre}<br>Entrega: ${titulo}<br>Fecha: ${fecha}</div>
+${cuerpoHTML}${videosHTML}
+<button class="btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+</body></html>`);
+  win.document.close();
 }
 
 async function iniciarEstudiante() {
@@ -715,7 +734,7 @@ function renderCorreccionEstudiante(correccion, titulo, fecha) {
     <div style="margin-top:1rem;padding:1rem;background:var(--fondo);border-radius:8px;border-left:4px solid var(--primario);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
         <h4 style="margin:0;">Tu corrección</h4>
-        <button onclick="descargarCorreccionEst('${correccion.id}')" style="background:none;border:1px solid var(--borde);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.78rem;color:var(--texto-suave);" title="Descargar corrección como texto">⬇ Descargar</button>
+        <button onclick="descargarCorreccionEst('${correccion.id}')" style="background:none;border:1px solid var(--borde);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.78rem;color:var(--texto-suave);" title="Abrir versión para imprimir o guardar como PDF">🖨 Guardar PDF</button>
       </div>
       ${cuerpoHTML}
       ${renderVideosSugeridos(correccion.videos_sugeridos)}

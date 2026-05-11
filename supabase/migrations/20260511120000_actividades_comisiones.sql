@@ -26,11 +26,13 @@ INSERT INTO actividades_comisiones (actividad_id, comision_id)
 SELECT id, comision_id FROM actividades WHERE comision_id IS NOT NULL
 ON CONFLICT DO NOTHING;
 
+-- Primero drop de la política que depende de comision_id
+DROP POLICY IF EXISTS "actividades_alumno_select" ON actividades;
+
 -- Quitar columna legacy (ya no se necesita)
 ALTER TABLE actividades DROP COLUMN IF EXISTS comision_id;
 
--- Actualizar RLS de actividades para alumnos: usa la tabla pivot
-DROP POLICY IF EXISTS "actividades_alumno_select" ON actividades;
+-- Recrear RLS de actividades para alumnos con la tabla pivot
 CREATE POLICY "actividades_alumno_select"
 ON actividades FOR SELECT TO authenticated
 USING (

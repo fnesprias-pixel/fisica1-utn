@@ -348,7 +348,6 @@ async function cargarComisionesGlobal() {
   const opcionesTodas = {
     'filtro-comision': 'Todas',
     'filtro-comision-entregas': 'Todas',
-    'sel-comision-actividad': 'Todas las comisiones',
   };
   Object.entries(opcionesTodas).forEach(([id, label]) => {
     const sel = document.getElementById(id);
@@ -358,6 +357,18 @@ async function cargarComisionesGlobal() {
       sel.innerHTML += `<option value="${c.id}">${c.nombre}${c.turno ? ' — ' + c.turno : ''}</option>`;
     });
   });
+
+  // Poblar checkboxes de comisiones en el formulario de nueva actividad
+  const chkContenedor = document.getElementById('chk-comisiones-actividad');
+  if (chkContenedor) {
+    chkContenedor.innerHTML = '';
+    comisiones.forEach(c => {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:inline-flex;align-items:center;gap:0.3rem;font-size:0.875rem;cursor:pointer;padding:0.2rem 0.5rem;border:1px solid var(--borde);border-radius:4px;';
+      label.innerHTML = `<input type="checkbox" value="${c.id}" style="accent-color:var(--primario);"> ${c.nombre}${c.turno ? ' — ' + c.turno : ''}`;
+      chkContenedor.appendChild(label);
+    });
+  }
 }
 
 // =============================================
@@ -1059,23 +1070,31 @@ function configurarFormularioActividad() {
     e.preventDefault();
     const titulo = document.getElementById('act-titulo').value.trim();
     const enunciado = textareaEnunciado.value.trim();
-    const comisionId = document.getElementById('sel-comision-actividad').value || null;
     const unidadId = document.getElementById('sel-unidad-actividad').value || null;
+    const comisionesSeleccionadas = Array.from(
+      document.querySelectorAll('#chk-comisiones-actividad input[type=checkbox]:checked')
+    ).map(chk => chk.value);
     if (!titulo || !enunciado) return;
 
     const btn = form.querySelector('[type=submit]');
     btn.disabled = true;
-    const { error } = await supabase.from('actividades').insert({
+    const { data: nueva, error } = await supabase.from('actividades').insert({
       titulo,
       enunciado,
-      comision_id: comisionId,
       unidad_id: unidadId,
       created_by: perfilDocente.id,
-    });
+    }).select('id').single();
+
+    if (!error && nueva && comisionesSeleccionadas.length) {
+      await supabase.from('actividades_comisiones').insert(
+        comisionesSeleccionadas.map(cid => ({ actividad_id: nueva.id, comision_id: cid }))
+      );
+    }
     btn.disabled = false;
 
     if (!error) {
       form.reset();
+      document.querySelectorAll('#chk-comisiones-actividad input[type=checkbox]').forEach(chk => { chk.checked = false; });
       preview.innerHTML = '';
       cargarTabActividades();
     } else {
@@ -1096,7 +1115,7 @@ async function cargarTabActividades() {
 
   const { data, error } = await supabase
     .from('actividades')
-    .select('*, comisiones(nombre, turno), unidades(nombre, orden)')
+    .select('*, actividades_comisiones(comision_id, comisiones(nombre, turno)), unidades(nombre, orden)')
     .order('created_at', { ascending: false });
 
   if (error || !data?.length) {
@@ -1117,8 +1136,9 @@ async function crearCardActividad(actividad) {
     cerrada:   '<span class="badge" style="background:#e5e7eb;color:#6b7280;">Cerrada</span>',
   }[actividad.estado] || actividad.estado;
 
-  const comisionLabel = actividad.comisiones
-    ? `${actividad.comisiones.nombre}${actividad.comisiones.turno ? ' — ' + actividad.comisiones.turno : ''}`
+  const asignaciones = actividad.actividades_comisiones || [];
+  const comisionLabel = asignaciones.length
+    ? asignaciones.map(a => a.comisiones?.nombre || '').filter(Boolean).join(', ')
     : 'Todas las comisiones';
 
   // Contar entregas vinculadas
@@ -1198,6 +1218,29 @@ async function crearCardActividad(actividad) {
         <div style="padding:0.5rem 0.75rem;background:#eff6ff;border-radius:6px;font-size:0.82rem;color:#1e40af;">
           📢 Publicada — los alumnos de <strong>${comisionLabel}</strong> pueden ver el enunciado y enviar su resolución.
         </div>` : ''}
+
+      <!-- Editar comisiones -->
+      <div style="margin-top:1rem;padding:0.75rem;background:var(--fondo);border-radius:6px;border:1px solid var(--borde);">
+        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" class="toggle-editar-comisiones">
+          <span style="font-size:0.75rem;font-weight:600;color:var(--texto-suave);text-transform:uppercase;letter-spacing:0.05em;">
+            Comisiones asignadas: <span style="text-transform:none;font-weight:400;">${comisionLabel}</span>
+          </span>
+          <span style="font-size:0.75rem;color:var(--primario);">Editar ▾</span>
+        </div>
+        <div class="panel-editar-comisiones" style="display:none;margin-top:0.75rem;">
+          <div class="chk-comisiones-card" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.6rem;">
+            ${comisiones.map(c => {
+              const asignada = asignaciones.some(a => a.comision_id === c.id);
+              return `<label style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.875rem;cursor:pointer;padding:0.2rem 0.5rem;border:1px solid var(--borde);border-radius:4px;">
+                <input type="checkbox" value="${c.id}" ${asignada ? 'checked' : ''} style="accent-color:var(--primario);"> ${c.nombre}${c.turno ? ' — ' + c.turno : ''}
+              </label>`;
+            }).join('')}
+          </div>
+          <p style="font-size:0.78rem;color:var(--texto-suave);margin:0 0 0.5rem;">Sin ninguna marcada = visible para todas las comisiones.</p>
+          <button class="btn-guardar-comisiones btn-secundario" style="width:auto;font-size:0.85rem;">Guardar comisiones</button>
+          <span class="feedback-comisiones" style="font-size:0.82rem;margin-left:0.5rem;display:none;"></span>
+        </div>
+      </div>
     </div>
   `;
 
@@ -1405,6 +1448,46 @@ async function crearCardActividad(actividad) {
     if (!confirm('¿Cerrar esta actividad? Los alumnos dejarán de verla.')) return;
     await supabase.from('actividades').update({ estado: 'cerrada' }).eq('id', actividad.id);
     cargarTabActividades();
+  });
+
+  // Toggle panel editar comisiones
+  card.querySelector('.toggle-editar-comisiones').addEventListener('click', () => {
+    const panel = card.querySelector('.panel-editar-comisiones');
+    const abierto = panel.style.display !== 'none';
+    panel.style.display = abierto ? 'none' : '';
+  });
+
+  // Guardar comisiones
+  card.querySelector('.btn-guardar-comisiones').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const feedback = card.querySelector('.feedback-comisiones');
+    const seleccionadas = Array.from(
+      card.querySelectorAll('.chk-comisiones-card input[type=checkbox]:checked')
+    ).map(chk => chk.value);
+
+    btn.disabled = true;
+    feedback.style.display = 'none';
+
+    // Reemplazar asignaciones: borrar todas las actuales e insertar las nuevas
+    await supabase.from('actividades_comisiones').delete().eq('actividad_id', actividad.id);
+    if (seleccionadas.length) {
+      await supabase.from('actividades_comisiones').insert(
+        seleccionadas.map(cid => ({ actividad_id: actividad.id, comision_id: cid }))
+      );
+    }
+
+    btn.disabled = false;
+    feedback.textContent = '✓ Guardado';
+    feedback.style.color = '#065f46';
+    feedback.style.display = '';
+    setTimeout(() => { feedback.style.display = 'none'; }, 2500);
+
+    // Actualizar etiqueta en el encabezado del panel
+    const nuevasNombres = seleccionadas.length
+      ? comisiones.filter(c => seleccionadas.includes(c.id)).map(c => c.nombre).join(', ')
+      : 'Todas las comisiones';
+    card.querySelector('.toggle-editar-comisiones span:first-child').innerHTML =
+      `<span style="text-transform:uppercase;font-size:0.75rem;font-weight:600;color:var(--texto-suave);letter-spacing:0.05em;">Comisiones asignadas: </span><span style="text-transform:none;font-weight:400;">${nuevasNombres}</span>`;
   });
 
   return card;

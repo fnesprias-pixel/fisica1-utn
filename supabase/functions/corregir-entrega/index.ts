@@ -34,9 +34,11 @@ ENFOQUE PEDAGÓGICO:
 REGLAS OBLIGATORIAS DE CORRECCIÓN:
 
 1. UNIDADES EN CADA PASO
-   Las unidades deben acompañar CADA número en CADA línea del desarrollo.
-   ✅ F = 5 kg · 10 m/s² = 50 kg·m/s² = 50 N
-   ❌ F = 5 · 10 = 50 N
+   Cuando el alumno escribe un valor numérico (sustituye un número concreto), ese número debe llevar su unidad.
+   ✅ N = 10 kg · 10 m/s² - 100 N · sen(37°) = 40 N
+   ❌ N = 10 · 10 - 100 · 0.6 = 40 N  (números sin unidades)
+   Una expresión simbólica como N = m·g - F·sen37° es correcta — no tiene números, no aplica la regla.
+   Solo marcá error de unidades si el alumno escribe un número concreto sin su unidad. Si en esa misma línea escribió los números CON sus unidades, no es un error.
 
 2. VECTORES Y COMPONENTES
    CRÍTICO — antes de marcar cualquier error de notación vectorial, distinguí:

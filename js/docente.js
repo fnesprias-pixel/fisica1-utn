@@ -1,5 +1,16 @@
 // Lógica del panel del docente
 
+// Convierte un ArrayBuffer a base64 en chunks de 32 KB para no agotar la memoria del browser
+function bufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 0x8000; // 32 KB
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+  }
+  return btoa(binary);
+}
+
 let perfilDocente = null;
 let unidades = [];
 let comisiones = [];
@@ -1009,8 +1020,7 @@ function configurarFormularioActividad() {
 
     try {
       const buffer = await archivo.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      const base64 = btoa(bytes.reduce((s, b) => s + String.fromCharCode(b), ''));
+      const base64 = bufferToBase64(buffer);
       const mime = archivo.type || 'image/jpeg';
 
       const { data, error } = await supabase.functions.invoke('transcribir-enunciado', {

@@ -116,10 +116,10 @@ async function llamarOpenRouter(
 // ─── Helper: escapar backslashes LaTeX antes de parsear JSON ─────────────────
 // DeepSeek emite \sum, \text{N}, \circ, etc. con un solo backslash dentro del JSON.
 // JSON.parse interpreta \t como TAB, descarta \s, \c, etc. arruinando el LaTeX.
-// Este paso dobla los backslashes sueltos (\X → \\X) ANTES de que jsonrepair/JSON.parse actúen.
+// Este paso dobla solo los backslashes SUELTOS (\X → \\X), sin tocar los ya doblados (\\X).
+// Usa lookbehind Y lookahead para no procesar el segundo \ de un par \\X.
 function escaparLatexEnJSON(raw: string): string {
-  // Dobla backslash seguido de letra o paréntesis/corchete que NO ya esté doblado
-  return raw.replace(/\\(?!\\)([a-zA-Z\(\)\[\]\{\}|])/g, "\\\\$1");
+  return raw.replace(/(?<!\\)\\(?!\\)([a-zA-Z\(\)\[\]\{\}|])/g, "\\\\$1");
 }
 
 // ─── Helper: extraer y reparar JSON ──────────────────────────────────────────

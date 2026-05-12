@@ -272,13 +272,15 @@ function configurarModalContrasena() {
   const msgError = document.getElementById('error-pass');
   const msgExito = document.getElementById('exito-pass');
 
-  btnCambiar.addEventListener('click', () => {
+  const abrirModal = () => {
     modal.hidden = false;
     msgError.hidden = true;
     msgExito.hidden = true;
     document.getElementById('nueva-pass').value = '';
     document.getElementById('confirmar-pass').value = '';
-  });
+  };
+  btnCambiar.addEventListener('click', abrirModal);
+  document.getElementById('btn-cambiar-pass-icon')?.addEventListener('click', abrirModal);
 
   btnCancelar.addEventListener('click', () => { modal.hidden = true; });
 

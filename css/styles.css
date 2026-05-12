@@ -819,8 +819,16 @@ a:hover { text-decoration: underline; }
    RESPONSIVO
    ============================================= */
 
+/* ícono contraseña: oculto en desktop, visible en móvil */
+.btn-cambiar-pass-icon { display: none; }
+
 @media (max-width: 600px) {
   .header-app .nombre-usuario { display: none; }
+  .header-app .marca { gap: 0.4rem; }
+  .header-app .marca-texto { font-size: 0.78rem; }
+  .header-app .marca-sub { display: none; }
+  .btn-cambiar-pass-full { display: none; }
+  .btn-cambiar-pass-icon { display: inline-flex; align-items: center; justify-content: center; }
   .contenido-principal { padding: 1rem; }
   .login-card { padding: 2rem 1.25rem; }
   h1 { font-size: 1.4rem; }

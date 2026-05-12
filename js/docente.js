@@ -57,6 +57,13 @@ function descargarCorreccionDoc(id) {
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <title>Corrección — ${titulo}</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\\\(','\\\\)'], ['$','$']], displayMath: [['\\\\[','\\\\]'], ['$$','$$']] },
+  startup: { ready() { MathJax.startup.defaultReady(); MathJax.startup.promise.then(() => { document.getElementById('btn-pdf').style.display = 'block'; }); } }
+};
+<\/script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async><\/script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Georgia,serif;max-width:750px;margin:2rem auto;padding:1rem;color:#111;line-height:1.65;font-size:15px}
@@ -73,13 +80,13 @@ h2{font-size:1.05rem;color:#003087;margin:1.25rem 0 .75rem}
 .coment{margin-top:.65rem;font-size:.9rem}
 .videos{margin-top:1rem;font-size:.9rem}.videos ul{margin:.25rem 0 0 1.25rem}
 a{color:#003087}sup,sub{font-size:.78em}
-.btn{display:block;margin:1.5rem auto 0;padding:.5rem 1.5rem;background:#003087;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.95rem}
-@media print{.btn{display:none}}
+#btn-pdf{display:none;margin:1.5rem auto 0;padding:.5rem 1.5rem;background:#003087;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.95rem}
+@media print{#btn-pdf{display:none!important}}
 </style></head><body>
 <h1>Corrección — Física I UTN FRBA</h1>
 <div class="meta"><strong>Prof. Francisco Nesprías</strong><br>Alumno: ${nombre}<br>Entrega: ${titulo}<br>Fecha: ${fecha}</div>
 ${cuerpoHTML}${videosHTML}
-<button class="btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+<button id="btn-pdf" onclick="window.print()">Imprimir / Guardar PDF</button>
 </body></html>`);
   win.document.close();
 }
@@ -738,10 +745,15 @@ async function crearCardEntregaDocente(entrega) {
   const btnMin = card.querySelector('.btn-min-card');
   cuerpo.hidden = true;
   btnMin.textContent = '▼';
-  btnMin.addEventListener('click', () => {
+  let _mathjaxYaRenderizado = false;
+  btnMin.addEventListener('click', async () => {
     const cerrado = cuerpo.hidden;
     cuerpo.hidden = !cerrado;
     btnMin.textContent = cerrado ? '▲' : '▼';
+    if (cerrado && !_mathjaxYaRenderizado) {
+      _mathjaxYaRenderizado = true;
+      await MathJax.typesetPromise([cuerpo]);
+    }
   });
 
   card.querySelector('.btn-del-card').addEventListener('click', async () => {

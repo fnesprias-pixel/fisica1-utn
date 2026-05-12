@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MODELO_DEFAULT = "google/gemini-2.5-pro-preview";
+const MODELO_DEFAULT = "deepseek/deepseek-v4-pro";
 
 const SYSTEM_PROMPT = `Sos un asistente que ayuda a docentes de Física I (UTN FRBA) a revisar la resolución de referencia de un ejercicio antes de publicarlo.
 
@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
     const { enunciado, resolucion } = body;
     if (!enunciado || !resolucion) throw new Error("enunciado y resolucion son requeridos");
 
-    const modelo = Deno.env.get("MODELO_IA") ?? MODELO_DEFAULT;
+    const modelo = Deno.env.get("MODELO_IA_TEXTO") ?? MODELO_DEFAULT;
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",

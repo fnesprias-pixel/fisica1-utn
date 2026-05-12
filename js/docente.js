@@ -765,12 +765,13 @@ async function crearCardEntregaDocente(entrega) {
 
 function renderFeedback(text) {
   if (!text) return '';
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
-    .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
-    .replace(/([a-zA-Zα-ωΑ-Ω0-9])\^([0-9a-zA-Z])/g, '$1<sup>$2</sup>')
-    .replace(/([a-zA-Zα-ωΑ-Ω0-9])_([0-9a-zA-Z,]+)/g, '$1<sub>$2</sub>');
+  // Separar bloques LaTeX (\(...\) y \[...\]) del texto plano para no romperlos.
+  // Índices pares = texto plano, índices impares = bloque LaTeX → dejar intactos.
+  const parts = text.split(/(\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) return part; // bloque LaTeX — no tocar
+    return part.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); // fallback markdown
+  }).join('');
 }
 
 function renderInterpretacion(texto) {

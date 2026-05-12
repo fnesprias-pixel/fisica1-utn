@@ -761,6 +761,7 @@ function renderCorreccionEstudiante(correccion, titulo, fecha) {
         <div style="font-weight:600;color:var(--primario);margin-bottom:0.75rem;">
           Problema ${p.numero || (i + 1)}${p.titulo ? ' — ' + p.titulo : ''}
         </div>
+        ${renderInterpretacion(p.interpretacion_enunciado)}
         ${renderDimensionEstudiante('Planteamiento', p.planteamiento_puntaje, p.planteamiento_feedback)}
         <div style="height:0.5rem;"></div>
         ${renderDimensionEstudiante('Procedimiento', p.procedimiento_puntaje, p.procedimiento_feedback)}
@@ -771,6 +772,7 @@ function renderCorreccionEstudiante(correccion, titulo, fecha) {
     `).join('');
   } else {
     cuerpoHTML = `
+      ${renderInterpretacion(correccion.interpretacion_enunciado)}
       ${renderDimensionEstudiante('Planteamiento', correccion.planteamiento_puntaje, correccion.planteamiento_feedback)}
       <div style="height:0.5rem;"></div>
       ${renderDimensionEstudiante('Procedimiento', correccion.procedimiento_puntaje, correccion.procedimiento_feedback)}

@@ -1238,7 +1238,7 @@ async function crearCardActividad(actividad) {
               </label>`;
             }).join('')}
           </div>
-          <p style="font-size:0.78rem;color:var(--texto-suave);margin:0 0 0.5rem;">Sin ninguna marcada = visible para todas las comisiones.</p>
+          <p style="font-size:0.78rem;color:var(--texto-suave);margin:0 0 0.5rem;">Sin ninguna marcada = no visible para ningún alumno.</p>
           <button class="btn-guardar-comisiones btn-secundario" style="width:auto;font-size:0.85rem;">Guardar comisiones</button>
           <span class="feedback-comisiones" style="font-size:0.82rem;margin-left:0.5rem;display:none;"></span>
         </div>

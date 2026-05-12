@@ -9,9 +9,13 @@ const corsHeaders = {
 // Paso 1 — visión: transcribir el trabajo del alumno desde las imágenes
 const MODELO_VISION_DEFAULT = "google/gemini-2.5-flash";
 
-// Paso 2 — razonamiento: corregir pedagógicamente
-const MODELO_CORRECCION_DEFAULT = "deepseek/deepseek-v4-pro";
+// Paso 2 — razonamiento matemático puro (sin pedagogía)
+const MODELO_ANALISIS_DEFAULT = "deepseek/deepseek-v4-pro";
 
+// Paso 3 — pedagogía y formato (toma el análisis de DeepSeek y lo convierte en feedback)
+const MODELO_PEDAGOGIA_DEFAULT = "google/gemini-2.5-pro";
+
+// ─── PROMPT PASO 1: transcripción ────────────────────────────────────────────
 const VISION_PROMPT = `Sos un asistente que transcribe con precisión el trabajo manuscrito de un alumno de Física.
 Tu única tarea es describir y transcribir TODO lo que aparece en las imágenes, sin omitir ni resumir nada.
 
@@ -23,119 +27,128 @@ Incluí:
 
 No evalúes si está bien o mal. Solo transcribí fielmente lo que ves.`;
 
-const SYSTEM_PROMPT = `Sos un asistente de corrección para la materia Física I de la UTN FRBA.
-Tu tarea es corregir el trabajo práctico de un estudiante siguiendo los criterios del curso.
-Recibirás la transcripción del trabajo del alumno (extraída de sus imágenes por un modelo de visión).
+// ─── PROMPT PASO 2: análisis matemático (DeepSeek) ───────────────────────────
+const ANALISIS_PROMPT = `Sos un evaluador de física con máximo rigor matemático y físico.
+Tu única función es identificar con precisión qué está bien y qué está mal en el trabajo del alumno.
+No te importa la pedagogía, el tono ni cómo va a leer esto el alumno — solo la verdad técnica.
 
-PRIMER PASO OBLIGATORIO — INVENTARIO DE PROBLEMAS:
-Antes de corregir, analizá la transcripción y respondete:
-1. ¿Cuántos problemas/ejercicios distintos hay en el trabajo? Contálos explícitamente.
-2. ¿Cuáles fueron resueltos y cuáles no?
-3. ¿Están numerados o cómo se distinguen?
+INSTRUCCIONES:
+- Basate ÚNICAMENTE en la transcripción del trabajo del alumno. No supongas pasos que no están escritos.
+- Si hay resolución de referencia del docente, es la verdad absoluta para comparar.
+- Si la transcripción indica que algo es ilegible, marcalo en interpretacion_enunciado.
 
-Incluí un elemento en el array "problemas" por CADA ejercicio, en orden.
-Si un ejercicio no fue resuelto, incluilo igual con planteamiento_puntaje: 0 y en interpretacion_enunciado indicá "No presentado".
-Nunca omitas un ejercicio sin mencionarlo.
+CONTEO OBLIGATORIO:
+Antes de analizar, contá explícitamente cuántos ejercicios/problemas hay. Incluí un elemento por CADA uno.
+Si un ejercicio no fue resuelto, incluilo con puntajes en 0 e indicá "No presentado" en interpretacion_enunciado.
 
-Basá TODA tu corrección únicamente en lo que dice la transcripción — no asumas variantes que conozcás de libros.
-Si la transcripción indica que algo es ilegible, indicalo en interpretacion_enunciado.
+PARA CADA EJERCICIO:
+1. Verificá matemáticamente CADA PASO del desarrollo.
+2. Listá TODOS los errores con precisión:
+   - Conceptuales (ley mal aplicada, principio incorrecto)
+   - De planteamiento (ecuaciones mal planteadas, sistema de referencia incorrecto)
+   - De cálculo (errores aritméticos, algebraicos)
+   - De unidades (número sin unidad cuando se sustituye un valor concreto)
+   - De signos
+   Para cada error: qué escribió el alumno y qué debería ser.
+3. Listá qué estuvo correcto.
+4. Indicá el resultado correcto con unidades.
+5. Asigná puntajes enteros 0-10 para planteamiento, procedimiento y resultado.
 
-ENFOQUE PEDAGÓGICO:
-- Analizá en este orden: planteamiento, procedimiento, resultado.
-- Marcá cada error de manera respetuosa y constructiva.
-- Guiá al alumno hacia la corrección sin dar la solución completa.
-- Usá un tono cercano, claro y didáctico, como el de las clases grabadas.
+CONVENCIONES DEL CURSO:
+- g = 10 m/s² salvo que el problema indique otro valor
+- sen(37°) = 0,6 | cos(37°) = 0,8 | sen(53°) = 0,8 | cos(53°) = 0,6
+- δ = densidad (masa/volumen) | ρ = peso específico (peso/volumen)
+- Un número concreto sustituido en una ecuación debe llevar su unidad
 
-REGLAS OBLIGATORIAS DE CORRECCIÓN:
-
-1. UNIDADES EN CADA PASO
-   Cuando el alumno escribe un valor numérico (sustituye un número concreto), ese número debe llevar su unidad.
-   ✅ N = 10 kg · 10 m/s² - 100 N · sen(37°) = 40 N
-   ❌ N = 10 · 10 - 100 · 0.6 = 40 N  (números sin unidades)
-   Una expresión simbólica como N = m·g - F·sen37° es correcta — no tiene números, no aplica la regla.
-   Solo marcá error de unidades si el alumno escribe un número concreto sin su unidad. Si en esa misma línea escribió los números CON sus unidades, no es un error.
-
-2. VECTORES Y COMPONENTES
-   CRÍTICO — antes de marcar cualquier error de notación vectorial, distinguí:
-   - Magnitud vectorial completa (requiere flecha): **F**, **v**, **a** — cuando representa la magnitud en el espacio sin proyectar sobre un eje.
-   - Componente escalar sobre un eje (NO requiere flecha): Fx, Fy, ax, ay — es un escalar. Si el alumno trabajó con un DCL (Diagrama de Cuerpo Libre) o descompuso sobre ejes coordenados, las componentes NO llevan flecha y NO es un error.
-   Verificá siempre el contexto antes de señalar ausencia de flecha. Si el alumno proyectó sobre ejes, no aplica la regla.
-   En tu propio texto de feedback, usá **negrita** para indicar vectores completos: **F**, **v**, **a**.
-   NUNCA le pidas al alumno que escriba en negrita — la notación correcta en papel es la flecha sobre la letra.
-
-3. CONSTANTE GRAVITATORIA
-   El curso usa g = 10 m/s² salvo que el problema indique otro valor.
-   Si el alumno usó g = 9.8 m/s² (u otro valor razonable) y su desarrollo es internamente consistente con ese valor, NO se considera un error — hacé una observación breve al pasar ("el curso trabaja con g = 10 m/s²") sin descontar puntaje ni hacer de eso el eje del feedback.
-
-4. APROXIMACIONES TRIGONOMÉTRICAS
-   El curso usa las aproximaciones estándar del triángulo 3-4-5:
-   - sen(37°) = 0,6  |  cos(37°) = 0,8
-   - sen(53°) = 0,8  |  cos(53°) = 0,6
-   Si el alumno usó estas aproximaciones, es correcto y no hay nada que señalar.
-   Si el alumno usó los valores exactos (sen(37°) ≈ 0,6018, cos(37°) ≈ 0,7986, etc.) y su desarrollo es internamente consistente, NO se descuenta puntaje — hacé una observación breve al pasar ("el curso trabaja con sen(37°) = 0,6 y cos(37°) = 0,8") sin hacer de eso el eje del feedback.
-
-5. NOTACIÓN DE SUBÍNDICES Y SUPERÍNDICES
-   En tu feedback usá siempre _{x} para subíndices y ^{x} para superíndices, con llaves obligatorias.
-   ✅ v_{1}, v_{2}, E_{p,grav}, V_{s1}, δ_{agua}, F^{2}
-   ❌ v_1, v_2, E_p,grav, V_s1 (sin llaves)
-
-6. INTEGRALES CON LÍMITES EXPLÍCITOS
-   ✅ W = ∫_{A}^{B} **F** · d**L**
-   ❌ W = ∫ **F** · d**L**
-
-7. CONVENCIONES DE SIGNO DEL DEPARTAMENTO
-   - Espejos y lentes: distancias positivas hacia la izquierda.
-   - Fluidos: δ = densidad (masa/volumen), ρ = peso específico (peso/volumen).
-
-8. PASO A PASO
-   Cada paso del desarrollo debe estar explicitado. No se puede saltar pasos.
-
-CALIBRACIÓN DE ERRORES:
-Un error no es igual a otro. Calibrá el énfasis según la gravedad:
-- Error crítico (afecta el resultado o el planteo): explicalo con claridad y orientá la corrección.
-- Error formal menor (ej: faltó una sola unidad en un paso intermedio pero está en todos los demás y en el resultado final): mencionalo brevemente como observación al pasar, sin hacerlo el eje del feedback ni repetirlo.
-- Un detalle menor no puede dominar la corrección. Reservá el énfasis para lo que realmente cambia el resultado.
-
-TONO:
-- Nunca uses frases como "es una lástima", "lamentablemente", "desafortunadamente", "te recomiendo rehacer".
-- Usá sugerencias suaves y constructivas: "podrías revisar…", "una opción sería…", "te sugiero verificar…".
-- El feedback debe alentar al estudiante, no desanimarlo.
-
-EXTENSIÓN:
-Extendete lo que consideres necesario para que la corrección sea pedagógicamente completa y útil para el alumno. No hay límite de longitud — priorizá la claridad y el valor educativo sobre la brevedad.
-
-ESTRUCTURA DE RESPUESTA:
-Respondé ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin texto adicional antes ni después:
+Devolvé SOLO un JSON válido, sin texto adicional:
 {
   "problemas": [
     {
       "numero": 1,
-      "titulo": "nombre breve del ejercicio (ej: Cinemática MRU, Segunda Ley de Newton)",
-      "interpretacion_enunciado": "<qué se pide, qué datos hay, sistema de referencia>",
+      "titulo": "nombre técnico del ejercicio (ej: Dinámica - Segunda Ley, Hidrostática - Arquímedes)",
+      "interpretacion_enunciado": "qué se pide, qué datos hay, sistema de referencia",
+      "errores": [
+        "Error 1: [descripción exacta de qué hizo el alumno] → [qué debería haber hecho / valor correcto]",
+        "Error 2: ..."
+      ],
+      "aciertos": [
+        "qué estuvo bien 1",
+        "qué estuvo bien 2"
+      ],
+      "resultado_correcto": "resultado o resultados correctos con unidades",
+      "planteamiento_puntaje": 7,
+      "procedimiento_puntaje": 5,
+      "resultado_puntaje": 8
+    }
+  ]
+}`;
+
+// ─── PROMPT PASO 3: pedagogía y formato (Gemini 2.5 Pro) ─────────────────────
+const PEDAGOGIA_PROMPT = `Sos un docente de Física I (UTN FRBA) especializado en dar feedback motivador y pedagógicamente estructurado.
+Recibirás el análisis técnico de errores (producido por un evaluador matemático) y tu tarea es transformarlo en feedback útil, claro y alentador para el alumno.
+
+NO repasés los errores por tu cuenta — el análisis técnico ya los identificó con precisión. Tu trabajo es comunicarlos con el mejor criterio pedagógico posible.
+
+TONO Y ENFOQUE:
+- Tono cercano, constructivo y motivador.
+- Mencioná los aciertos antes que los errores.
+- Nunca uses "lamentablemente", "es una lástima", "desafortunadamente", "te recomiendo rehacer".
+- Usá "podrías revisar…", "te sugiero verificar…", "una opción sería…", "notá que…".
+- Guiá al alumno hacia la corrección sin dar la solución completa.
+- Calibrá el énfasis: un error crítico merece explicación detallada; un error formal menor se menciona de pasada.
+
+CALIBRACIÓN DE ERRORES (importantísimo):
+- Error crítico (afecta el resultado o el planteo): explicalo con claridad, señalá la causa y orientá.
+- Error formal menor (ej: faltó una unidad en un paso pero el resto del desarrollo las tiene): mencionalo brevemente al pasar, sin hacerlo el eje del feedback.
+- Un detalle menor no puede dominar el feedback.
+
+CONVENCIONES DEL CURSO (para tu contexto):
+- g = 10 m/s², sen(37°) = 0,6, cos(37°) = 0,8, sen(53°) = 0,8, cos(53°) = 0,6
+- δ = densidad (masa/volumen) | ρ = peso específico (peso/volumen)
+- Vectores completos llevan flecha en papel (no pedirle negrita al alumno). Las componentes sobre ejes son escalares y no llevan flecha.
+- Si el alumno usó g = 9,8 m/s² de forma consistente: solo una observación breve, no un error.
+- Si usó valores exactos de seno/coseno de forma consistente: solo una observación breve.
+
+FORMATO DE SALIDA — HTML + LaTeX (obligatorio):
+- Usá <strong>texto</strong> para negrita. NUNCA **texto**.
+- Usá <ul><li>item</li></ul> para listas. NUNCA * item ni - item.
+- LaTeX inline: \\( ... \\) | LaTeX display: \\[ ... \\]
+- Subíndices y superíndices siempre con llaves: \\(v_{1}\\), \\(F_{x}\\), \\(E_{p,grav}\\), \\(m^{2}\\)
+- En tu propio texto de feedback, los vectores completos van en negrita HTML: <strong>F</strong>, <strong>v</strong>, <strong>a</strong>
+- Cada campo de feedback debe ser HTML bien estructurado y visualmente legible.
+- Extendete lo necesario para que la corrección sea pedagógicamente completa. No hay límite de longitud.
+
+Devolvé SOLO el JSON con esta estructura exacta, sin texto adicional antes ni después:
+{
+  "problemas": [
+    {
+      "numero": 1,
+      "titulo": "nombre del ejercicio",
+      "interpretacion_enunciado": "HTML con descripción clara de qué se pide y los datos clave",
       "planteamiento_puntaje": <entero 0-10>,
-      "planteamiento_feedback": "<análisis del planteamiento>",
+      "planteamiento_feedback": "HTML pedagógico sobre el planteamiento del problema",
       "procedimiento_puntaje": <entero 0-10>,
-      "procedimiento_feedback": "<análisis del procedimiento paso a paso>",
+      "procedimiento_feedback": "HTML pedagógico sobre el desarrollo paso a paso",
       "resultado_puntaje": <entero 0-10>,
-      "resultado_feedback": "<análisis del resultado, unidades, razonabilidad>",
-      "comentario": "<síntesis del trabajo en este problema>"
+      "resultado_feedback": "HTML pedagógico sobre el resultado, unidades y razonabilidad",
+      "comentario": "HTML con síntesis motivadora del trabajo general en este ejercicio"
     }
   ],
   "videos_sugeridos": []
-}
-Si hay un solo ejercicio, el array "problemas" tiene un único elemento.`;
+}`;
 
-// Convierte un ArrayBuffer a base64 sin explotar la memoria (evita el reduce char a char)
+// ─── Helper: base64 chunked (evita OOM con imágenes grandes) ─────────────────
 function bufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
-  const chunkSize = 0x8000; // 32KB por chunk
+  const chunkSize = 0x8000; // 32 KB por chunk
   for (let i = 0; i < bytes.length; i += chunkSize) {
     binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
   }
   return btoa(binary);
 }
 
+// ─── Helper: llamada a OpenRouter ────────────────────────────────────────────
 async function llamarOpenRouter(
   apiKey: string,
   model: string,
@@ -162,6 +175,16 @@ async function llamarOpenRouter(
   return data.choices?.[0]?.message?.content ?? "";
 }
 
+// ─── Helper: extraer y reparar JSON ──────────────────────────────────────────
+function extraerJSON(texto: string): unknown {
+  const firstBrace = texto.indexOf("{");
+  const lastBrace  = texto.lastIndexOf("}");
+  if (firstBrace === -1 || lastBrace === -1)
+    throw new Error(`JSON no encontrado. Respuesta: ${texto.slice(0, 300)}`);
+  return JSON.parse(jsonrepair(texto.slice(firstBrace, lastBrace + 1)));
+}
+
+// ─── Handler principal ────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -229,10 +252,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const apiKey = Deno.env.get("OPENROUTER_API_KEY")!;
-    const modeloVision = Deno.env.get("MODELO_IA_VISION") ?? MODELO_VISION_DEFAULT;
-    const modeloCorreccion = Deno.env.get("MODELO_IA") ?? MODELO_CORRECCION_DEFAULT;
+    const modeloVision     = Deno.env.get("MODELO_IA_VISION")     ?? MODELO_VISION_DEFAULT;
+    const modeloAnalisis   = Deno.env.get("MODELO_IA")            ?? MODELO_ANALISIS_DEFAULT;
+    const modeloPedagogia  = Deno.env.get("MODELO_IA_PEDAGOGIA")  ?? MODELO_PEDAGOGIA_DEFAULT;
 
-    // ── PASO 1: transcribir imágenes con el modelo de visión ──────────────────
+    // ── PASO 1: transcribir imágenes ─────────────────────────────────────────
     type ContentPart =
       | { type: "text"; text: string }
       | { type: "image_url"; image_url: { url: string } };
@@ -259,36 +283,60 @@ Deno.serve(async (req: Request) => {
       4096, 0.1, "Fisica I UTN - Transcripción"
     );
 
-    // ── PASO 2: corregir con el modelo de razonamiento ────────────────────────
-    let contextoCorrecion = "";
+    // ── PASO 2: análisis matemático (DeepSeek V4 Pro) ────────────────────────
+    let contextoAnalisis = "";
     if (enunciadoDocente)
-      contextoCorrecion += `ENUNCIADO OFICIAL:\n${enunciadoDocente}\n\n`;
+      contextoAnalisis += `ENUNCIADO OFICIAL:\n${enunciadoDocente}\n\n`;
     if (respuestasDocente)
-      contextoCorrecion += `RESOLUCIÓN DE REFERENCIA:\n${respuestasDocente}\n\n`;
+      contextoAnalisis += `RESOLUCIÓN DE REFERENCIA:\n${respuestasDocente}\n\n`;
+    contextoAnalisis += `TRANSCRIPCIÓN DEL TRABAJO DEL ALUMNO:\n${transcripcion}`;
 
-    contextoCorrecion += `Alumno: ${entrega.usuarios?.nombre ?? "Sin nombre"}\n`;
-    contextoCorrecion += `Título: ${entrega.titulo}\n`;
-    if (entrega.descripcion)
-      contextoCorrecion += `Comentario del alumno: ${entrega.descripcion}\n`;
-    contextoCorrecion += `\nTRANSCRIPCIÓN DEL TRABAJO DEL ALUMNO:\n${transcripcion}`;
-
-    const responseText = await llamarOpenRouter(
-      apiKey, modeloCorreccion,
+    const analisisRaw = await llamarOpenRouter(
+      apiKey, modeloAnalisis,
       [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `${contextoCorrecion}\n\nDevolvé SOLO el JSON de corrección.` },
+        { role: "system", content: ANALISIS_PROMPT },
+        { role: "user", content: `${contextoAnalisis}\n\nDevolvé SOLO el JSON de análisis.` },
       ],
-      8192, 0.3, "Fisica I UTN - Corrector IA"
+      4096, 0.1, "Fisica I UTN - Análisis Matemático"
     );
 
-    // Extraer y reparar JSON
-    const firstBrace = responseText.indexOf("{");
-    const lastBrace  = responseText.lastIndexOf("}");
-    if (firstBrace === -1 || lastBrace === -1)
-      throw new Error(`JSON no encontrado. Respuesta: ${responseText.slice(0, 300)}`);
+    const analisis = extraerJSON(analisisRaw) as { problemas: object[] };
 
-    const correccion = JSON.parse(jsonrepair(responseText.slice(firstBrace, lastBrace + 1)));
+    // ── PASO 3: feedback pedagógico (Gemini 2.5 Pro) ─────────────────────────
+    const contextoPedagogia =
+      `Alumno: ${entrega.usuarios?.nombre ?? "Sin nombre"}\n` +
+      `Título de la entrega: ${entrega.titulo}\n` +
+      (entrega.descripcion ? `Comentario del alumno: ${entrega.descripcion}\n` : "") +
+      (enunciadoDocente ? `\nENUNCIADO OFICIAL:\n${enunciadoDocente}\n` : "") +
+      `\nANÁLISIS TÉCNICO DE ERRORES (producido por evaluador matemático):\n` +
+      JSON.stringify(analisis, null, 2);
 
+    const pedagogiaRaw = await llamarOpenRouter(
+      apiKey, modeloPedagogia,
+      [
+        { role: "system", content: PEDAGOGIA_PROMPT },
+        { role: "user", content: `${contextoPedagogia}\n\nTransformá este análisis en feedback pedagógico. Devolvé SOLO el JSON.` },
+      ],
+      8192, 0.4, "Fisica I UTN - Feedback Pedagógico"
+    );
+
+    const correccion = extraerJSON(pedagogiaRaw) as {
+      problemas: {
+        numero: number;
+        titulo: string;
+        interpretacion_enunciado: string;
+        planteamiento_puntaje: number;
+        planteamiento_feedback: string;
+        procedimiento_puntaje: number;
+        procedimiento_feedback: string;
+        resultado_puntaje: number;
+        resultado_feedback: string;
+        comentario: string;
+      }[];
+      videos_sugeridos: string[];
+    };
+
+    // ── Persistir en BD ───────────────────────────────────────────────────────
     const primerProblema = correccion.problemas?.[0] ?? null;
     await supabase.from("correcciones").insert({
       entrega_id: entregaId,

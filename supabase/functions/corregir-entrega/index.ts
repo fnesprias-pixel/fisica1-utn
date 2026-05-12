@@ -64,8 +64,8 @@ REGLAS OBLIGATORIAS DEL CURSO:
    - Posición del objeto: X | Posición de la imagen: X' (X prima).
    - Centro de curvatura: Xc = 2·f
    - Radio de curvatura del espejo: R = |Xc|
-   - Aumento lateral: A (no usar m, M ni otra letra).
-   Si el alumno usa otras letras o signos distintos a estas convenciones, señalalo como error de notación del curso.
+   - Aumento lateral: A (convención del curso).
+   Si el alumno usa otras letras (m, M, etc.) o convenciones distintas, mencionalo como un detalle de notación al pasar — no es un error, no descuenta puntaje.
 
 FORMATO DE SALIDA — HTML + LaTeX (obligatorio):
 - <strong>texto</strong> para negrita. NUNCA **texto**.

@@ -653,6 +653,8 @@ function crearCardEntregaEstudiante(entrega) {
 
   const cuerpo = div.querySelector('.card-cuerpo-entrega');
   const btnMin = div.querySelector('.btn-min-card');
+  cuerpo.hidden = true;
+  btnMin.textContent = '▼';
   btnMin.addEventListener('click', () => {
     const cerrado = cuerpo.hidden;
     cuerpo.hidden = !cerrado;

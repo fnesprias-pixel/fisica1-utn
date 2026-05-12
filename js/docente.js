@@ -725,6 +725,8 @@ async function crearCardEntregaDocente(entrega) {
 
   const cuerpo = card.querySelector('.card-cuerpo-entrega');
   const btnMin = card.querySelector('.btn-min-card');
+  cuerpo.hidden = true;
+  btnMin.textContent = '▼';
   btnMin.addEventListener('click', () => {
     const cerrado = cuerpo.hidden;
     cuerpo.hidden = !cerrado;
@@ -1264,6 +1266,8 @@ async function crearCardActividad(actividad) {
   // Minimize/expand
   const cuerpoAct = card.querySelector('.cuerpo-act');
   const btnMin = card.querySelector('.btn-min-act');
+  cuerpoAct.hidden = true;
+  btnMin.textContent = '▼';
   btnMin.addEventListener('click', () => {
     const cerrado = cuerpoAct.hidden;
     cuerpoAct.hidden = !cerrado;

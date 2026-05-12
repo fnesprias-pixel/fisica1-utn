@@ -6,14 +6,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Modelo a usar — cambiable sin redeployar seteando la var de entorno MODELO_IA
-const MODELO_DEFAULT = "google/gemini-2.5-pro-preview";
+// Paso 1 — visión: transcribir el trabajo del alumno desde las imágenes
+const MODELO_VISION_DEFAULT = "google/gemini-2.5-flash";
+
+// Paso 2 — razonamiento: corregir pedagógicamente
+const MODELO_CORRECCION_DEFAULT = "deepseek/deepseek-v4-pro";
+
+const VISION_PROMPT = `Sos un asistente que transcribe con precisión el trabajo manuscrito de un alumno de Física.
+Tu única tarea es describir y transcribir TODO lo que aparece en las imágenes, sin omitir ni resumir nada.
+
+Incluí:
+- Cantidad de problemas/ejercicios y cómo están identificados (numerados, por letra, etc.)
+- Para cada problema: todos los datos que el alumno escribió, el sistema de referencia elegido (si lo indicó), el DCL o diagrama (describilo en texto), todas las ecuaciones planteadas con sus variables, cada paso del desarrollo numérico con los valores y unidades tal como los escribió, el resultado final.
+- Cualquier tachadura, corrección o anotación al margen relevante.
+- Si algo es ilegible, indicalo explícitamente.
+
+No evalúes si está bien o mal. Solo transcribí fielmente lo que ves.`;
 
 const SYSTEM_PROMPT = `Sos un asistente de corrección para la materia Física I de la UTN FRBA.
-Tu tarea es corregir el trabajo práctico de un estudiante siguiendo los criterios de la curso.
+Tu tarea es corregir el trabajo práctico de un estudiante siguiendo los criterios del curso.
+Recibirás la transcripción del trabajo del alumno (extraída de sus imágenes por un modelo de visión).
 
 PRIMER PASO OBLIGATORIO — INVENTARIO DE PROBLEMAS:
-Antes de corregir, examiná TODAS las imágenes con atención y respondete:
+Antes de corregir, analizá la transcripción y respondete:
 1. ¿Cuántos problemas/ejercicios distintos hay en el trabajo? Contálos explícitamente.
 2. ¿Cuáles fueron resueltos y cuáles no?
 3. ¿Están numerados o cómo se distinguen?
@@ -22,8 +37,8 @@ Incluí un elemento en el array "problemas" por CADA ejercicio, en orden.
 Si un ejercicio no fue resuelto, incluilo igual con planteamiento_puntaje: 0 y en interpretacion_enunciado indicá "No presentado".
 Nunca omitas un ejercicio sin mencionarlo.
 
-Leé el enunciado de cada problema tal como aparece en las imágenes. TODA tu corrección debe basarse únicamente en lo que leíste — no asumas variantes que conozcás de libros.
-Si el enunciado no es legible, indicalo en interpretacion_enunciado.
+Basá TODA tu corrección únicamente en lo que dice la transcripción — no asumas variantes que conozcás de libros.
+Si la transcripción indica que algo es ilegible, indicalo en interpretacion_enunciado.
 
 ENFOQUE PEDAGÓGICO:
 - Analizá en este orden: planteamiento, procedimiento, resultado.
@@ -86,13 +101,8 @@ TONO:
 - Usá sugerencias suaves y constructivas: "podrías revisar…", "una opción sería…", "te sugiero verificar…".
 - El feedback debe alentar al estudiante, no desanimarlo.
 
-BREVEDAD — MUY IMPORTANTE:
-La corrección completa debe caber en UNA carilla impresa (A4).
-- Cada campo de feedback (planteamiento, procedimiento, resultado): máximo 3 oraciones. Mencioná solo lo más importante.
-- interpretacion_enunciado: 1 oración con los datos clave y lo que se pide. Sin reformular el enunciado completo.
-- comentario: 1 oración de cierre.
-- Si el trabajo está bien, decilo en una línea y no expandas.
-- Omití frases de relleno ("En este problema…", "En relación a…", "Cabe destacar que…"). Ir directo al punto.
+EXTENSIÓN:
+Extendete lo que consideres necesario para que la corrección sea pedagógicamente completa y útil para el alumno. No hay límite de longitud — priorizá la claridad y el valor educativo sobre la brevedad.
 
 ESTRUCTURA DE RESPUESTA:
 Respondé ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin texto adicional antes ni después:
@@ -115,6 +125,32 @@ Respondé ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin
 }
 Si hay un solo ejercicio, el array "problemas" tiene un único elemento.`;
 
+async function llamarOpenRouter(
+  apiKey: string,
+  model: string,
+  messages: object[],
+  maxTokens: number,
+  temperature: number,
+  title: string,
+): Promise<string> {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://fisica1-utn-w59y.vercel.app",
+      "X-Title": title,
+    },
+    body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
+  });
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`OpenRouter error ${response.status} (${model}): ${err}`);
+  }
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -134,7 +170,7 @@ Deno.serve(async (req: Request) => {
     let enunciadoDocente: string | null = body.enunciado ?? null;
     let respuestasDocente: string | null = body.respuestas ?? null;
 
-    // Verificar autorización: docente siempre puede; alumno solo si tiene autocorreccion_ia y es su entrega
+    // Verificar autorización
     const authHeader = req.headers.get("Authorization");
     if (authHeader) {
       const token = authHeader.replace("Bearer ", "");
@@ -150,14 +186,10 @@ Deno.serve(async (req: Request) => {
           const esPropia = ent?.usuario_id === user.id;
           const tieneIa = perfil?.autocorreccion_ia;
 
-          // Verificar si la entrega está vinculada a una actividad aprobada
           let esActividadAprobada = false;
           if (ent?.actividad_id) {
             const { data: act } = await supabase
-              .from("actividades")
-              .select("aprobada")
-              .eq("id", ent.actividad_id)
-              .single();
+              .from("actividades").select("aprobada").eq("id", ent.actividad_id).single();
             esActividadAprobada = act?.aprobada === true;
           }
 
@@ -178,44 +210,24 @@ Deno.serve(async (req: Request) => {
 
     if (entregaErr || !entrega) throw new Error("Entrega no encontrada");
 
-    // Si la entrega está vinculada a una actividad, usar su enunciado y solución aprobada
-    // (a menos que el docente haya proporcionado datos propios en esta llamada)
     if (entrega.actividades) {
-      if (!enunciadoDocente && entrega.actividades.enunciado) {
+      if (!enunciadoDocente && entrega.actividades.enunciado)
         enunciadoDocente = entrega.actividades.enunciado;
-      }
-      if (!respuestasDocente && entrega.actividades.resolucion_correcta) {
+      if (!respuestasDocente && entrega.actividades.resolucion_correcta)
         respuestasDocente = entrega.actividades.resolucion_correcta;
-      }
     }
 
-    // Construir el mensaje en formato OpenAI-compatible
+    const apiKey = Deno.env.get("OPENROUTER_API_KEY")!;
+    const modeloVision = Deno.env.get("MODELO_IA_VISION") ?? MODELO_VISION_DEFAULT;
+    const modeloCorreccion = Deno.env.get("MODELO_IA") ?? MODELO_CORRECCION_DEFAULT;
+
+    // ── PASO 1: transcribir imágenes con el modelo de visión ──────────────────
     type ContentPart =
       | { type: "text"; text: string }
       | { type: "image_url"; image_url: { url: string } };
 
-    const userContent: ContentPart[] = [];
+    const visionContent: ContentPart[] = [];
 
-    // Contexto provisto por el docente (si lo completó antes de corregir)
-    if (enunciadoDocente) {
-      userContent.push({
-        type: "text",
-        text: `ENUNCIADO OFICIAL (provisto por el docente — basá toda la corrección en este enunciado):\n${enunciadoDocente}`,
-      });
-    }
-    if (respuestasDocente) {
-      userContent.push({
-        type: "text",
-        text: `RESPUESTAS CORRECTAS (provistas por el docente — usalas para verificar si el alumno llegó al resultado correcto):\n${respuestasDocente}`,
-      });
-    }
-
-    userContent.push({
-      type: "text",
-      text: `Alumno: ${entrega.usuarios?.nombre ?? "Sin nombre"}\nTítulo del ejercicio: ${entrega.titulo}${entrega.descripcion ? "\nComentario del alumno: " + entrega.descripcion : ""}`,
-    });
-
-    // Imágenes como data URL base64
     for (const url of (entrega.imagenes as string[] ?? [])) {
       const imgRes = await fetch(url);
       if (!imgRes.ok) continue;
@@ -223,60 +235,54 @@ Deno.serve(async (req: Request) => {
       const bytes = new Uint8Array(buffer);
       const base64 = btoa(bytes.reduce((s, b) => s + String.fromCharCode(b), ""));
       const mime = (imgRes.headers.get("content-type") ?? "image/jpeg").split(";")[0];
-
-      userContent.push({
-        type: "image_url",
-        image_url: { url: `data:${mime};base64,${base64}` },
-      });
+      visionContent.push({ type: "image_url", image_url: { url: `data:${mime};base64,${base64}` } });
     }
 
-    userContent.push({
+    visionContent.push({
       type: "text",
-      text: "Analizá el trabajo del alumno siguiendo las reglas y devolvé SOLO el JSON de corrección.",
+      text: "Transcribí fielmente todo el contenido de estas imágenes según las instrucciones.",
     });
 
-    const modelo = Deno.env.get("MODELO_IA") ?? MODELO_DEFAULT;
+    const transcripcion = await llamarOpenRouter(
+      apiKey, modeloVision,
+      [{ role: "system", content: VISION_PROMPT }, { role: "user", content: visionContent }],
+      4096, 0.1, "Fisica I UTN - Transcripción"
+    );
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("OPENROUTER_API_KEY")!}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://fisica1-utn-w59y.vercel.app",
-        "X-Title": "Fisica I UTN - Corrector IA",
-      },
-      body: JSON.stringify({
-        model: modelo,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userContent },
-        ],
-        max_tokens: 8192,
-        temperature: 0.3,
-      }),
-    });
+    // ── PASO 2: corregir con el modelo de razonamiento ────────────────────────
+    let contextoCorrecion = "";
+    if (enunciadoDocente)
+      contextoCorrecion += `ENUNCIADO OFICIAL:\n${enunciadoDocente}\n\n`;
+    if (respuestasDocente)
+      contextoCorrecion += `RESOLUCIÓN DE REFERENCIA:\n${respuestasDocente}\n\n`;
 
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`OpenRouter error ${response.status}: ${err}`);
-    }
+    contextoCorrecion += `Alumno: ${entrega.usuarios?.nombre ?? "Sin nombre"}\n`;
+    contextoCorrecion += `Título: ${entrega.titulo}\n`;
+    if (entrega.descripcion)
+      contextoCorrecion += `Comentario del alumno: ${entrega.descripcion}\n`;
+    contextoCorrecion += `\nTRANSCRIPCIÓN DEL TRABAJO DEL ALUMNO:\n${transcripcion}`;
 
-    const data = await response.json();
-    const responseText: string = data.choices?.[0]?.message?.content ?? "";
+    const responseText = await llamarOpenRouter(
+      apiKey, modeloCorreccion,
+      [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: `${contextoCorrecion}\n\nDevolvé SOLO el JSON de corrección.` },
+      ],
+      8192, 0.3, "Fisica I UTN - Corrector IA"
+    );
 
-    // Extraer y reparar JSON — la IA a veces genera strings con saltos de línea o comillas sin escapar
+    // Extraer y reparar JSON
     const firstBrace = responseText.indexOf("{");
     const lastBrace  = responseText.lastIndexOf("}");
-    if (firstBrace === -1 || lastBrace === -1) {
+    if (firstBrace === -1 || lastBrace === -1)
       throw new Error(`JSON no encontrado. Respuesta: ${responseText.slice(0, 300)}`);
-    }
+
     const correccion = JSON.parse(jsonrepair(responseText.slice(firstBrace, lastBrace + 1)));
 
     const primerProblema = correccion.problemas?.[0] ?? null;
     await supabase.from("correcciones").insert({
       entrega_id: entregaId,
       problemas: correccion.problemas ?? null,
-      // Campos planos por compatibilidad con correcciones anteriores
       interpretacion_enunciado: primerProblema?.interpretacion_enunciado ?? null,
       planteamiento_puntaje: primerProblema?.planteamiento_puntaje ?? null,
       planteamiento_feedback: primerProblema?.planteamiento_feedback ?? null,
@@ -294,9 +300,8 @@ Deno.serve(async (req: Request) => {
     });
 
   } catch (err) {
-    if (entregaId) {
+    if (entregaId)
       await supabase.from("entregas").update({ estado: "pendiente" }).eq("id", entregaId);
-    }
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

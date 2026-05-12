@@ -684,10 +684,15 @@ function crearCardEntregaEstudiante(entrega) {
   const btnMin = div.querySelector('.btn-min-card');
   cuerpo.hidden = true;
   btnMin.textContent = '▼';
-  btnMin.addEventListener('click', () => {
+  let _mathjaxYaRenderizado = false;
+  btnMin.addEventListener('click', async () => {
     const cerrado = cuerpo.hidden;
     cuerpo.hidden = !cerrado;
     btnMin.textContent = cerrado ? '▲' : '▼';
+    if (cerrado && !_mathjaxYaRenderizado) {
+      _mathjaxYaRenderizado = true;
+      await MathJax.typesetPromise([cuerpo]);
+    }
   });
 
   div.querySelector('.btn-autocorregir')?.addEventListener('click', async (e) => {

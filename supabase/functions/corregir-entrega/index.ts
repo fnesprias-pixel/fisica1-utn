@@ -50,7 +50,7 @@ REGLAS OBLIGATORIAS DEL CURSO:
 1. UNIDADES: cuando el alumno sustituye un valor numérico, debe llevar su unidad. ✅ N = 10 kg · 10 m/s² ❌ N = 10 · 10
 2. VECTORES: distinguí magnitud vectorial completa (lleva flecha en papel) de componente escalar sobre eje (NO lleva flecha). Verificá el contexto antes de señalar ausencia de flecha.
 3. g = 10 m/s² salvo indicación. Si el alumno usó 9,8 consistentemente: observación breve, no error.
-4. TRIG: sen(37°)=0,6 | cos(37°)=0,8 | sen(53°)=0,8 | cos(53°)=0,6. Si usó valores exactos consistentemente: observación breve.
+4. TRIG: sen(37°)=0,6 | cos(37°)=0,8 | sen(53°)=0,8 | cos(53°)=0,6. Si el alumno usó valores exactos (ej: cos(37°)≈0,7986) de forma consistente: solo una observación breve al pasar. NUNCA cites el valor exacto en el feedback — solo la aproximación del curso.
 5. FLUIDOS: δ = densidad (masa/volumen) | ρ = peso específico (peso/volumen).
 6. No pedirle al alumno que escriba en negrita — la notación correcta en papel es la flecha sobre la letra.
 
@@ -58,7 +58,10 @@ FORMATO DE SALIDA — HTML + LaTeX (obligatorio):
 - <strong>texto</strong> para negrita. NUNCA **texto**.
 - <ul><li>item</li></ul> para listas. NUNCA * item.
 - LaTeX inline: \\( ... \\) | LaTeX display: \\[ ... \\]
-- Subíndices y superíndices con llaves: \\(v_{1}\\), \\(F_{x}\\), \\(E_{p,grav}\\)
+- TODA expresión matemática va dentro de delimitadores. NUNCA LaTeX crudo fuera de ellos.
+  ✅ La ecuación \\(\\sum F_{x} = m \\cdot a\\) muestra que…
+  ❌ La ecuación \sum F_x = m \cdot a muestra que…  ← sin delimitadores, se ve como texto roto
+- Subíndices y superíndices siempre con llaves: \\(v_{1}\\), \\(F_{x}\\), \\(E_{p,grav}\\), \\(m^{2}\\)
 - Vectores completos en el feedback: <strong>F</strong>, <strong>v</strong>, <strong>a</strong>
 
 Devolvé SOLO el JSON con esta estructura exacta, sin texto adicional:

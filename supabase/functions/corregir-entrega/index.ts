@@ -113,13 +113,23 @@ async function llamarOpenRouter(
   return data.choices?.[0]?.message?.content ?? "";
 }
 
+// ─── Helper: escapar backslashes LaTeX antes de parsear JSON ─────────────────
+// DeepSeek emite \sum, \text{N}, \circ, etc. con un solo backslash dentro del JSON.
+// JSON.parse interpreta \t como TAB, descarta \s, \c, etc. arruinando el LaTeX.
+// Este paso dobla los backslashes sueltos (\X → \\X) ANTES de que jsonrepair/JSON.parse actúen.
+function escaparLatexEnJSON(raw: string): string {
+  // Dobla backslash seguido de letra o paréntesis/corchete que NO ya esté doblado
+  return raw.replace(/\\(?!\\)([a-zA-Z\(\)\[\]\{\}|])/g, "\\\\$1");
+}
+
 // ─── Helper: extraer y reparar JSON ──────────────────────────────────────────
 function extraerJSON(texto: string): unknown {
   const firstBrace = texto.indexOf("{");
   const lastBrace  = texto.lastIndexOf("}");
   if (firstBrace === -1 || lastBrace === -1)
     throw new Error(`JSON no encontrado. Respuesta: ${texto.slice(0, 300)}`);
-  return JSON.parse(jsonrepair(texto.slice(firstBrace, lastBrace + 1)));
+  const raw = escaparLatexEnJSON(texto.slice(firstBrace, lastBrace + 1));
+  return JSON.parse(jsonrepair(raw));
 }
 
 // ─── Handler principal ────────────────────────────────────────────────────────

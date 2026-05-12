@@ -57,10 +57,12 @@ REGLAS OBLIGATORIAS DEL CURSO:
 FORMATO DE SALIDA — HTML + LaTeX (obligatorio):
 - <strong>texto</strong> para negrita. NUNCA **texto**.
 - <ul><li>item</li></ul> para listas. NUNCA * item.
-- LaTeX inline: \\( ... \\) | LaTeX display: \\[ ... \\]
-- TODA expresión matemática va dentro de delimitadores. NUNCA LaTeX crudo fuera de ellos.
-  ✅ La ecuación \\(\\sum F_{x} = m \\cdot a\\) muestra que…
-  ❌ La ecuación \sum F_x = m \cdot a muestra que…  ← sin delimitadores, se ve como texto roto
+- LaTeX inline: \\( ... \\) — OBLIGATORIO el backslash antes del paréntesis.
+- LaTeX display: \\[ ... \\]
+- TODA expresión matemática va dentro de delimitadores con backslash. NUNCA LaTeX crudo.
+  ✅ correcto:  \\(\\sum F_{x} = m \\cdot a\\)
+  ❌ incorrecto: ( \\sum F_{x} = m \\cdot a )  ← sin backslash, NO se renderiza
+  ❌ incorrecto: \\sum F_{x} = m \\cdot a      ← sin delimitadores, se ve como texto roto
 - Subíndices y superíndices siempre con llaves: \\(v_{1}\\), \\(F_{x}\\), \\(E_{p,grav}\\), \\(m^{2}\\)
 - Vectores completos en el feedback: <strong>F</strong>, <strong>v</strong>, <strong>a</strong>
 

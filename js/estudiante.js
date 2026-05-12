@@ -629,9 +629,12 @@ async function cargarMisEntregas() {
 
 function renderFeedback(text) {
   if (!text) return '';
-  // Separar tokens LaTeX (\(...\) y \[...\]) del resto para no romperlos con regexes de HTML.
-  // Índices pares = texto plano, índices impares = bloque LaTeX → dejar intactos.
-  const parts = text.split(/(\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g);
+  // Fallback: DeepSeek a veces emite ( \cmd ) sin backslash → convertir a \( \cmd \)
+  // Solo aplica cuando el contenido parece LaTeX (contiene \, ^, _, letras griegas, etc.)
+  let t = text.replace(/(?<!\\)\((\s*(?:[^()]*?(?:\\[a-zA-Z]+|[_^{}])[^()]*?)+?)\s*\)/g,
+    (m, inner) => `\\(${inner}\\)`);
+  // Separar bloques LaTeX del texto plano para no romperlos con regexes de HTML.
+  const parts = t.split(/(\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g);
   return parts.map((part, i) => {
     if (i % 2 === 1) return part; // bloque LaTeX — no tocar
     return part.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); // fallback markdown

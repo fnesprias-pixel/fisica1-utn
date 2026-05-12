@@ -765,9 +765,11 @@ async function crearCardEntregaDocente(entrega) {
 
 function renderFeedback(text) {
   if (!text) return '';
-  // Separar bloques LaTeX (\(...\) y \[...\]) del texto plano para no romperlos.
-  // Índices pares = texto plano, índices impares = bloque LaTeX → dejar intactos.
-  const parts = text.split(/(\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g);
+  // Fallback: DeepSeek a veces emite ( \cmd ) sin backslash → convertir a \( \cmd \)
+  let t = text.replace(/(?<!\\)\((\s*(?:[^()]*?(?:\\[a-zA-Z]+|[_^{}])[^()]*?)+?)\s*\)/g,
+    (m, inner) => `\\(${inner}\\)`);
+  // Separar bloques LaTeX del texto plano para no romperlos con regexes de HTML.
+  const parts = t.split(/(\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g);
   return parts.map((part, i) => {
     if (i % 2 === 1) return part; // bloque LaTeX — no tocar
     return part.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); // fallback markdown

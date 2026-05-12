@@ -137,16 +137,6 @@ Devolvé SOLO el JSON con esta estructura exacta, sin texto adicional antes ni d
   "videos_sugeridos": []
 }`;
 
-// ─── Helper: base64 chunked (evita OOM con imágenes grandes) ─────────────────
-function bufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  const chunkSize = 0x8000; // 32 KB por chunk
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
-  }
-  return btoa(binary);
-}
 
 // ─── Helper: llamada a OpenRouter ────────────────────────────────────────────
 async function llamarOpenRouter(
@@ -257,20 +247,14 @@ Deno.serve(async (req: Request) => {
     const modeloPedagogia  = Deno.env.get("MODELO_IA_PEDAGOGIA")  ?? MODELO_PEDAGOGIA_DEFAULT;
 
     // ── PASO 1: transcribir imágenes ─────────────────────────────────────────
+    // Pasamos las URLs públicas directamente — Gemini las descarga por su cuenta,
+    // lo que elimina por completo el consumo de memoria de la edge function.
     type ContentPart =
       | { type: "text"; text: string }
       | { type: "image_url"; image_url: { url: string } };
 
-    const visionContent: ContentPart[] = [];
-
-    for (const url of (entrega.imagenes as string[] ?? [])) {
-      const imgRes = await fetch(url);
-      if (!imgRes.ok) continue;
-      const buffer = await imgRes.arrayBuffer();
-      const base64 = bufferToBase64(buffer);
-      const mime = (imgRes.headers.get("content-type") ?? "image/jpeg").split(";")[0];
-      visionContent.push({ type: "image_url", image_url: { url: `data:${mime};base64,${base64}` } });
-    }
+    const visionContent: ContentPart[] = (entrega.imagenes as string[] ?? [])
+      .map((url): ContentPart => ({ type: "image_url", image_url: { url } }));
 
     visionContent.push({
       type: "text",

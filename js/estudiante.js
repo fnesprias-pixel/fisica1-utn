@@ -1,5 +1,34 @@
 // Lógica del panel del estudiante
 
+/**
+ * Comprime una imagen usando Canvas antes de subirla.
+ * Reduce fotos de celular (10–20 MB) a ~200–400 KB sin perder legibilidad.
+ * @param {File} file - Archivo original
+ * @param {number} maxPx - Lado máximo en píxeles (default 1600)
+ * @param {number} quality - Calidad JPEG 0–1 (default 0.85)
+ * @returns {Promise<Blob>} Blob comprimido
+ */
+function comprimirImagen(file, maxPx = 1600, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round(height * maxPx / width); width = maxPx; }
+        else                { width = Math.round(width * maxPx / height);  height = maxPx; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Canvas toBlob falló')), 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo cargar la imagen')); };
+    img.src = url;
+  });
+}
+
 let perfilActual = null;
 const _correccionesEst = new Map(); // id → { correccion, titulo, fecha }
 
@@ -435,11 +464,11 @@ function abrirModalEntregaActividad(actividad, cardOrigen) {
     try {
       const urls = [];
       for (const archivo of archivos) {
-        const ext = archivo.name.split('.').pop();
-        const path = `${perfilActual.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const blob = await comprimirImagen(archivo);
+        const path = `${perfilActual.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
         const { error: uploadError } = await supabase.storage
           .from('entregas')
-          .upload(path, archivo, { contentType: archivo.type });
+          .upload(path, blob, { contentType: 'image/jpeg' });
         if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('entregas').getPublicUrl(path);
         urls.push(publicUrl);
@@ -526,11 +555,11 @@ function iniciarSeccionEntregas() {
     try {
       const urls = [];
       for (const archivo of archivos) {
-        const ext = archivo.name.split('.').pop();
-        const path = `${perfilActual.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const blob = await comprimirImagen(archivo);
+        const path = `${perfilActual.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
         const { error: uploadError } = await supabase.storage
           .from('entregas')
-          .upload(path, archivo, { contentType: archivo.type });
+          .upload(path, blob, { contentType: 'image/jpeg' });
 
         if (uploadError) throw uploadError;
 

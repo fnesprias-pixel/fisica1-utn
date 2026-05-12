@@ -125,6 +125,17 @@ Respondé ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin
 }
 Si hay un solo ejercicio, el array "problemas" tiene un único elemento.`;
 
+// Convierte un ArrayBuffer a base64 sin explotar la memoria (evita el reduce char a char)
+function bufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000; // 32KB por chunk
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+  }
+  return btoa(binary);
+}
+
 async function llamarOpenRouter(
   apiKey: string,
   model: string,
@@ -232,8 +243,7 @@ Deno.serve(async (req: Request) => {
       const imgRes = await fetch(url);
       if (!imgRes.ok) continue;
       const buffer = await imgRes.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      const base64 = btoa(bytes.reduce((s, b) => s + String.fromCharCode(b), ""));
+      const base64 = bufferToBase64(buffer);
       const mime = (imgRes.headers.get("content-type") ?? "image/jpeg").split(";")[0];
       visionContent.push({ type: "image_url", image_url: { url: `data:${mime};base64,${base64}` } });
     }

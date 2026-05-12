@@ -35,7 +35,6 @@ function descargarCorreccionDoc(id) {
     cuerpoHTML = problemas.map((p, i) => `
       ${i > 0 ? '<hr class="sep">' : ''}
       <h2>Problema ${p.numero || (i + 1)}${p.titulo ? ' — ' + p.titulo : ''}</h2>
-      ${p.interpretacion_enunciado ? `<div class="interp"><div class="interp-lbl">Como interpretó el enunciado</div>${renderFeedback(p.interpretacion_enunciado)}</div>` : ''}
       ${renderDimP('Planteamiento', p.planteamiento_puntaje, p.planteamiento_feedback)}
       ${renderDimP('Procedimiento', p.procedimiento_puntaje, p.procedimiento_feedback)}
       ${renderDimP('Resultado', p.resultado_puntaje, p.resultado_feedback)}
@@ -43,7 +42,6 @@ function descargarCorreccionDoc(id) {
     `).join('');
   } else {
     cuerpoHTML = `
-      ${correccion.interpretacion_enunciado ? `<div class="interp"><div class="interp-lbl">Como interpretó el enunciado</div>${renderFeedback(correccion.interpretacion_enunciado)}</div>` : ''}
       ${renderDimP('Planteamiento', correccion.planteamiento_puntaje, correccion.planteamiento_feedback)}
       ${renderDimP('Procedimiento', correccion.procedimiento_puntaje, correccion.procedimiento_feedback)}
       ${renderDimP('Resultado', correccion.resultado_puntaje, correccion.resultado_feedback)}
@@ -807,7 +805,6 @@ function renderCorreccionDocente(correccion, nombre, titulo, fecha) {
         <div style="font-weight:600;color:var(--primario);margin-bottom:0.75rem;">
           Problema ${p.numero || (i + 1)}${p.titulo ? ' — ' + p.titulo : ''}
         </div>
-        ${renderInterpretacion(p.interpretacion_enunciado)}
         ${renderDimension('Planteamiento', p.planteamiento_puntaje, p.planteamiento_feedback)}
         <div style="height:0.5rem;"></div>
         ${renderDimension('Procedimiento', p.procedimiento_puntaje, p.procedimiento_feedback)}
@@ -818,7 +815,6 @@ function renderCorreccionDocente(correccion, nombre, titulo, fecha) {
     `).join('');
   } else {
     cuerpoHTML = `
-      ${renderInterpretacion(correccion.interpretacion_enunciado)}
       ${renderDimension('Planteamiento', correccion.planteamiento_puntaje, correccion.planteamiento_feedback)}
       <div style="height:0.5rem;"></div>
       ${renderDimension('Procedimiento', correccion.procedimiento_puntaje, correccion.procedimiento_feedback)}

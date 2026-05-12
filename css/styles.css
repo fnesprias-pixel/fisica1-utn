@@ -826,7 +826,7 @@ a:hover { text-decoration: underline; }
   .header-app .nombre-usuario { display: none; }
   .header-app .marca { gap: 0.4rem; }
   .header-app .marca-texto { font-size: 0.78rem; }
-  .header-app .marca-sub { display: none; }
+  .header-app .marca-sub { font-size: 0.65rem; }
   .btn-cambiar-pass-full { display: none; }
   .btn-cambiar-pass-icon { display: inline-flex; align-items: center; justify-content: center; }
   .contenido-principal { padding: 1rem; }

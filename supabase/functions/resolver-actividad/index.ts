@@ -50,6 +50,7 @@ VECTORES: usá <strong>negrita HTML</strong> para magnitudes vectoriales complet
 CONSTANTE GRAVITATORIA: g = 10 m/s² salvo indicación contraria.
 SUBÍNDICES Y SUPERÍNDICES: siempre con llaves: \\(v_{1}\\), \\(cm^{3}\\), \\(gr/cm^{3}\\), \\(E_{p,grav}\\).
 FLUIDOS: \\(\\delta\\) = densidad (masa/volumen); \\(\\rho\\) = peso específico (peso/volumen).
+ROZAMIENTO CINÉTICO: la fuerza de rozamiento cinético se escribe \\(f_{rc}\\) (f minúscula, subíndice rc).
 LaTeX inline: \\( ... \\) — LaTeX display: \\[ ... \\]
 
 NUNCA uses asteriscos **así** para negrita — usá siempre las tags HTML <strong>texto</strong>.

@@ -1334,8 +1334,19 @@ async function crearCardActividad(actividad) {
     btn.textContent = '⏳ Generando…';
     feedbackIa.style.display = 'none';
 
+    const enunciado = actividad.enunciado?.trim();
+    if (!enunciado) {
+      btn.disabled = false;
+      btn.textContent = '🤖 Generar resolución';
+      feedbackIa.style.display = '';
+      feedbackIa.style.background = '#fef2f2';
+      feedbackIa.style.borderColor = '#fca5a5';
+      feedbackIa.textContent = 'El enunciado está vacío. Guardá la actividad con un enunciado antes de generar la resolución.';
+      return;
+    }
+
     const { data, error } = await supabase.functions.invoke('resolver-actividad', {
-      body: { enunciado: actividad.enunciado },
+      body: { enunciado },
     });
 
     btn.disabled = false;
@@ -1345,8 +1356,13 @@ async function crearCardActividad(actividad) {
       feedbackIa.style.display = '';
       feedbackIa.style.background = '#fef2f2';
       feedbackIa.style.borderColor = '#fca5a5';
-      const detalle = error?.message || data?.error || JSON.stringify(data) || 'sin detalle';
-      feedbackIa.textContent = `Error al generar: ${detalle}`;
+      // Intentar leer el cuerpo real del error HTTP
+      let detalle = error?.message || '';
+      try {
+        const ctx = await error?.context?.json?.();
+        if (ctx?.error) detalle = ctx.error;
+      } catch (_) { /* */ }
+      feedbackIa.textContent = `Error al generar: ${detalle || data?.error || 'sin detalle'}`;
       console.error('resolver-actividad error:', error, data);
       return;
     }

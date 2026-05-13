@@ -115,6 +115,7 @@ async function iniciarEstudiante() {
   await cargarActividades();
   iniciarSeccionEntregas();
   configurarModalContrasena();
+  suscribirCorreccionesRealtime();
 }
 
 // Carga y renderiza las unidades activas como acordeón
@@ -512,6 +513,10 @@ function abrirModalEntregaActividad(actividad, cardOrigen) {
       // Refrescar secciones
       await cargarActividades();
       await cargarMisEntregas();
+
+      // Avisar al alumno y abrir el historial
+      mostrarBanner('📤 Entrega enviada. Podés seguir el estado en el <strong>Historial de entregas</strong> — te avisaremos cuando esté corregida.');
+      abrirSeccion('cuerpo-historial');
     } catch (err) {
       msgError.textContent = 'Error al enviar. Intentá de nuevo.';
       msgError.hidden = false;
@@ -829,6 +834,63 @@ function renderVideosSugeridos(videos) {
       <strong style="font-size:0.9rem;">📺 Videos para repasar:</strong>
       <ul style="margin:0.25rem 0 0 1rem;font-size:0.85rem;">${items}</ul>
     </div>`;
+}
+
+// ── Helpers de UI ────────────────────────────────────────────────────────────
+
+function abrirSeccion(targetId) {
+  const cuerpo = document.getElementById(targetId);
+  if (!cuerpo || !cuerpo.hidden) return;
+  cuerpo.hidden = false;
+  const btn = document.querySelector(`.seccion-header[data-target="${targetId}"]`);
+  if (btn) {
+    btn.querySelector('.seccion-toggle').textContent = '▲';
+    btn.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function mostrarBanner(html, tipo = 'info') {
+  const viejo = document.getElementById('banner-notif-est');
+  if (viejo) viejo.remove();
+
+  const bg    = tipo === 'exito' ? '#d1fae5' : '#dbeafe';
+  const color = tipo === 'exito' ? '#065f46' : '#1e40af';
+  const borde = tipo === 'exito' ? '#86efac' : '#93c5fd';
+
+  const banner = document.createElement('div');
+  banner.id = 'banner-notif-est';
+  banner.style.cssText = `background:${bg};color:${color};border:1px solid ${borde};padding:0.7rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:0.875rem;display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;`;
+  banner.innerHTML = `<span>${html}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:inherit;flex-shrink:0;line-height:1;padding:0;">✕</button>`;
+
+  const main = document.querySelector('.contenido-principal');
+  main.insertAdjacentElement('afterbegin', banner);
+  banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Suscripción Realtime: avisa cuando una entrega pasa a "corregida" ─────────
+const _notifCorregidas = new Set();
+
+function suscribirCorreccionesRealtime() {
+  supabase
+    .channel('entregas-corregidas-alumno')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'entregas',
+      filter: `usuario_id=eq.${perfilActual.id}`,
+    }, (payload) => {
+      const { id, estado, titulo } = payload.new;
+      if (estado === 'corregida' && !_notifCorregidas.has(id)) {
+        _notifCorregidas.add(id);
+        mostrarBanner(
+          `✅ ¡La corrección de <strong>${titulo}</strong> ya está lista! Abrila en el Historial de entregas.`,
+          'exito'
+        );
+        abrirSeccion('cuerpo-historial');
+        cargarMisEntregas();
+      }
+    })
+    .subscribe();
 }
 
 document.addEventListener('DOMContentLoaded', iniciarEstudiante);

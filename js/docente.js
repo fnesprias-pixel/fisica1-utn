@@ -1345,7 +1345,9 @@ async function crearCardActividad(actividad) {
       feedbackIa.style.display = '';
       feedbackIa.style.background = '#fef2f2';
       feedbackIa.style.borderColor = '#fca5a5';
-      feedbackIa.textContent = 'Error al generar. Intentá de nuevo.';
+      const detalle = error?.message || data?.error || JSON.stringify(data) || 'sin detalle';
+      feedbackIa.textContent = `Error al generar: ${detalle}`;
+      console.error('resolver-actividad error:', error, data);
       return;
     }
 

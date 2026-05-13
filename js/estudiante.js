@@ -652,7 +652,9 @@ function renderInterpretacion(texto) {
 
 function crearCardEntregaEstudiante(entrega) {
   const correccion = entrega.correcciones?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] ?? null;
-  const fecha = new Date(entrega.created_at).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const fechaObj = new Date(entrega.created_at);
+  const fecha = fechaObj.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' })
+    + ' ' + fechaObj.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
 
   const estadoBadge = {
     pendiente:  '<span class="badge" style="background:#fef3c7;color:#92400e;">Pendiente revisión</span>',

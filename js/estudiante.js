@@ -669,7 +669,7 @@ function crearCardEntregaEstudiante(entrega) {
   const div = document.createElement('div');
   div.style.cssText = 'background:var(--blanco);border-radius:8px;box-shadow:var(--sombra);padding:1.25rem;margin-bottom:1rem;';
   const actividadBadge = entrega.actividades
-    ? `<span class="badge" style="background:#eff6ff;color:#1e40af;font-size:0.75rem;margin-left:0.4rem;">📋 ${entrega.actividades.titulo}</span>`
+    ? `<span class="badge" style="background:#eff6ff;color:#1e40af;font-size:0.75rem;margin-left:0.4rem;" title="Actividad: ${entrega.actividades.titulo}">📋</span>`
     : '';
 
   div.innerHTML = `

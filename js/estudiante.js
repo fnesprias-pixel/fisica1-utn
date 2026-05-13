@@ -375,6 +375,7 @@ function crearCardActividadEstudiante(actividad, estadoEntrega) {
       <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
         ${badgeEntrega}
         <button class="btn-toggle-enunciado btn-secundario" style="width:auto;padding:0.25rem 0.75rem;font-size:0.82rem;">Ver enunciado</button>
+        ${estadoEntrega ? `<button class="btn-rehacer-act" style="background:none;border:1px solid #bfdbfe;border-radius:4px;cursor:pointer;font-size:0.82rem;padding:0.25rem 0.6rem;color:#1d4ed8;">↩ Rehacer</button>` : ''}
       </div>
     </div>
 
@@ -402,8 +403,11 @@ function crearCardActividadEstudiante(actividad, estadoEntrega) {
     }
   });
 
-  // Abrir modal de entrega
+  // Abrir modal de entrega (nueva entrega o rehacer)
   card.querySelector('.btn-resolver-actividad')?.addEventListener('click', () => {
+    abrirModalEntregaActividad(actividad, card);
+  });
+  card.querySelector('.btn-rehacer-act')?.addEventListener('click', () => {
     abrirModalEntregaActividad(actividad, card);
   });
 
@@ -674,7 +678,6 @@ function crearCardEntregaEstudiante(entrega) {
       <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
         <span style="font-size:0.8rem;color:var(--texto-suave);">${fecha}</span>
         <button class="btn-min-card" style="background:none;border:1px solid var(--borde);border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:var(--texto-suave);" title="Minimizar">▲</button>
-        <button class="btn-rehacer-card" style="background:none;border:1px solid #bfdbfe;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:0.2rem 0.45rem;color:#1d4ed8;" title="Rehacer entrega">↩ Rehacer</button>
       </div>
     </div>
     <div class="card-cuerpo-entrega">
@@ -711,18 +714,6 @@ function crearCardEntregaEstudiante(entrega) {
     await supabase.from('entregas').update({ estado: 'procesando' }).eq('id', entrega.id);
     supabase.functions.invoke('corregir-entrega', { body: { entrega_id: entrega.id } })
       .then(() => cargarMisEntregas());
-  });
-
-  div.querySelector('.btn-rehacer-card').addEventListener('click', () => {
-    if (entrega.actividad_id) {
-      const actividad = { id: entrega.actividad_id, titulo: entrega.actividades?.titulo || entrega.titulo };
-      abrirModalEntregaActividad(actividad, null);
-    } else {
-      document.getElementById('entrega-titulo').value = entrega.titulo;
-      document.getElementById('entrega-descripcion').value = entrega.descripcion || '';
-      document.getElementById('form-entrega').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      document.getElementById('entrega-imagenes').focus();
-    }
   });
 
   div.querySelector('.btn-enviar-comentario')?.addEventListener('click', async (e) => {

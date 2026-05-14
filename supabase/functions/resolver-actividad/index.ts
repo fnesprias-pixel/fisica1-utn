@@ -133,8 +133,10 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    // Siempre HTTP 200 para que el cliente pueda leer data.error sin que
+    // Supabase JS consuma el body antes de lanzar FunctionsHttpError.
     return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

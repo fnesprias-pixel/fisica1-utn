@@ -91,6 +91,7 @@ REGLAS OBLIGATORIAS DEL CURSO:
    - Las lentes NO tienen Xc ni R — no aplican esos conceptos.
    - NUNCA usar la ecuación del fabricante de lentes. Si el alumno la usa (\\(\\frac{1}{f} = (n-1)(\\frac{1}{R_1}-\\frac{1}{R_2})\\)), señalalo como error conceptual — esa ecuación no corresponde a la formación de imágenes.
    Si el alumno usa otras letras (m, M, s, s', etc.) mencionalo como detalle de notación al pasar — no descuenta puntaje.
+9. DINÁMICA CON CUERDA: cuando dos cuerpos están unidos por una cuerda (incluso si pasa por una polea y cambia de dirección), la resolución correcta usa UN SOLO EJE solidario a la cuerda que se curva con ella. Ese eje único recorre la trayectoria de la cuerda: el sentido positivo es el de movimiento esperado y se mantiene continuo a través de la polea. Esto permite plantear una sola ecuación del sistema en lugar de dos sistemas de referencia separados. Si el alumno usa ejes separados para cada cuerpo en lugar de un eje solidario a la cuerda, mencionalo como observación metodológica — no descuenta puntaje si el resultado es correcto, pero señalalo como una forma menos elegante y más propensa a errores de signo.
 
 FORMATO DE SALIDA — HTML + LaTeX (obligatorio):
 - <strong>texto</strong> para negrita. NUNCA **texto**.

@@ -57,6 +57,8 @@ ROZAMIENTO CINÉTICO: la fuerza de rozamiento cinético se escribe \\(f_{rc}\\) 
   LENTES: ecuación de Gauss \\(\\frac{1}{X'} - \\frac{1}{X} = \\frac{1}{f}\\) (signo −). Aumento: \\(A = \\frac{X'}{X}\\) (sin signo menos). Las lentes NO tienen Xc ni R. NUNCA usar la ecuación del fabricante de lentes.
 LaTeX inline: \\( ... \\) — LaTeX display: \\[ ... \\]
 
+DINÁMICA CON CUERDA: cuando dos cuerpos están unidos por una cuerda (incluso si pasa por una polea y cambia de dirección), usá UN SOLO EJE solidario a la cuerda que se curva con ella. Ese eje recorre la trayectoria de la cuerda: el sentido positivo es el de movimiento esperado y se mantiene continuo a través de la polea. Planteá una sola ecuación del sistema. NO uses dos sistemas de referencia separados para cada cuerpo.
+
 NUNCA uses asteriscos **así** para negrita — usá siempre las tags HTML <strong>texto</strong>.
 NUNCA uses listas markdown (* item o - item) — usá <ul><li>item</li></ul> en HTML.
 NUNCA uses guiones o líneas de separación (---) — usá los títulos de bloque como delimitador.

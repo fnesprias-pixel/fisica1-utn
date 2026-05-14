@@ -52,12 +52,9 @@ SUBÍNDICES Y SUPERÍNDICES: siempre con llaves: \\(v_{1}\\), \\(cm^{3}\\), \\(g
 FLUIDOS: \\(\\delta\\) = densidad (masa/volumen); \\(\\rho\\) = peso específico (peso/volumen).
 ROZAMIENTO CINÉTICO: la fuerza de rozamiento cinético se escribe \\(f_{rc}\\) (f minúscula, subíndice rc).
 ÓPTICA — convenciones del curso:
-  - Eje positivo apunta hacia la IZQUIERDA. Los rayos viajan de izquierda a derecha.
-  - Posición del objeto: X | Posición de la imagen: X' (X prima).
-  - Centro de curvatura: \\(X_{c} = 2f\\) | Radio de curvatura del espejo: \\(R = |X_{c}|\\)
-  - Aumento lateral: \\(A = \\frac{X'}{X}\\) — sin signo menos.
-  - ESPEJOS — ecuación de Gauss: \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +).
-  - LENTES — ecuación de Gauss: \\(\\frac{1}{X'} - \\frac{1}{X} = \\frac{1}{f}\\) (signo −). NUNCA usar la ecuación del fabricante de lentes.
+  NOTACIÓN COMÚN (espejos y lentes): X = posición del objeto; X' = posición de la imagen; A = aumento lateral; \\(A = \\frac{X'}{X}\\) (sin signo menos). Eje positivo hacia la IZQUIERDA.
+  ESPEJOS: ecuación de Gauss \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +). Centro de curvatura: \\(X_{c} = 2f\\). Radio: \\(R = |X_{c}|\\).
+  LENTES: ecuación de Gauss \\(\\frac{1}{X'} - \\frac{1}{X} = \\frac{1}{f}\\) (signo −). Las lentes NO tienen Xc ni R. NUNCA usar la ecuación del fabricante de lentes.
 LaTeX inline: \\( ... \\) — LaTeX display: \\[ ... \\]
 
 NUNCA uses asteriscos **así** para negrita — usá siempre las tags HTML <strong>texto</strong>.

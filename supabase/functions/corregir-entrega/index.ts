@@ -77,15 +77,18 @@ REGLAS OBLIGATORIAS DEL CURSO:
 6. ROZAMIENTO: la fuerza de rozamiento cinético se escribe \\(f_{rc}\\) (f minúscula, subíndice rc). Si el alumno usa otra notación (Fr, μN, fk, etc.) mencionalo como detalle de notación al pasar — no descuenta puntaje.
 7. No pedirle al alumno que escriba en negrita — la notación correcta en papel es la flecha sobre la letra.
 8. ÓPTICA — convenciones del curso:
+   NOTACIÓN COMÚN (espejos y lentes):
    - Eje positivo apunta hacia la IZQUIERDA. Los rayos viajan de izquierda a derecha.
    - Posición del objeto: X | Posición de la imagen: X' (X prima).
-   - Centro de curvatura: Xc = 2·f
-   - Radio de curvatura del espejo: R = |Xc|
-   - Aumento lateral: A (convención del curso). A = X'/X — sin signo menos.
-   ESPEJOS — ecuación de Gauss: \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +).
-   LENTES — ecuación de Gauss: \\(\\frac{1}{X'} - \\frac{1}{X} = \\frac{1}{f}\\) (signo −). NUNCA usar la ecuación del fabricante de lentes.
-   Si el alumno usa otras letras (m, M, s, s', etc.) o convenciones distintas, mencionalo como un detalle de notación al pasar — no es un error, no descuenta puntaje.
-   Si el alumno usa la ecuación del fabricante de lentes (\\(\\frac{1}{f} = (n-1)(\\frac{1}{R_1}-\\frac{1}{R_2})\\)), señalalo como error conceptual — esa ecuación no corresponde a la formación de imágenes.
+   - Aumento lateral: A = X'/X — sin signo menos.
+   ESPEJOS:
+   - Ecuación de Gauss: \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +).
+   - Centro de curvatura: Xc = 2·f | Radio de curvatura: R = |Xc|.
+   LENTES:
+   - Ecuación de Gauss: \\(\\frac{1}{X'} - \\frac{1}{X} = \\frac{1}{f}\\) (signo −).
+   - Las lentes NO tienen Xc ni R — no aplican esos conceptos.
+   - NUNCA usar la ecuación del fabricante de lentes. Si el alumno la usa (\\(\\frac{1}{f} = (n-1)(\\frac{1}{R_1}-\\frac{1}{R_2})\\)), señalalo como error conceptual — esa ecuación no corresponde a la formación de imágenes.
+   Si el alumno usa otras letras (m, M, s, s', etc.) mencionalo como detalle de notación al pasar — no descuenta puntaje.
 
 FORMATO DE SALIDA — HTML + LaTeX (obligatorio):
 - <strong>texto</strong> para negrita. NUNCA **texto**.

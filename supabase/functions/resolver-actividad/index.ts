@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MODELO_DEFAULT = "deepseek/deepseek-v4-pro";
+const MODELO_DEFAULT = "google/gemini-2.5-flash";
 
 const SYSTEM_PROMPT = `Sos un docente experto en Física I (UTN FRBA) que desarrolla la resolución de referencia de un ejercicio.
 Esta resolución tiene doble propósito: será usada por la IA para corregir entregas de alumnos, Y será mostrada a los alumnos como modelo pedagógico después de que intenten resolverlo. Por eso debe ser completa, razonada y clara como lo haría un buen docente frente a un alumno.

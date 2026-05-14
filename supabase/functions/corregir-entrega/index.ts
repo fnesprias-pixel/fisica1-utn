@@ -80,12 +80,14 @@ REGLAS OBLIGATORIAS DEL CURSO:
    NOTACIÓN COMÚN (espejos y lentes):
    - Eje positivo apunta hacia la IZQUIERDA. Los rayos viajan de izquierda a derecha.
    - Posición del objeto: X | Posición de la imagen: X' (X prima).
-   - Aumento lateral: A = X'/X — sin signo menos.
+   - Aumento lateral: A (convención del curso).
    ESPEJOS:
    - Ecuación de Gauss: \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +).
+   - Aumento lateral: \\(A = -\\frac{X'}{X}\\) (con signo menos).
    - Centro de curvatura: Xc = 2·f | Radio de curvatura: R = |Xc|.
    LENTES:
    - Ecuación de Gauss: \\(\\frac{1}{X'} - \\frac{1}{X} = \\frac{1}{f}\\) (signo −).
+   - Aumento lateral: \\(A = \\frac{X'}{X}\\) (sin signo menos).
    - Las lentes NO tienen Xc ni R — no aplican esos conceptos.
    - NUNCA usar la ecuación del fabricante de lentes. Si el alumno la usa (\\(\\frac{1}{f} = (n-1)(\\frac{1}{R_1}-\\frac{1}{R_2})\\)), señalalo como error conceptual — esa ecuación no corresponde a la formación de imágenes.
    Si el alumno usa otras letras (m, M, s, s', etc.) mencionalo como detalle de notación al pasar — no descuenta puntaje.

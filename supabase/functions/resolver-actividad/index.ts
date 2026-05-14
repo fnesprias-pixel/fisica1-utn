@@ -53,7 +53,7 @@ FLUIDOS: \\(\\delta\\) = densidad (masa/volumen); \\(\\rho\\) = peso específico
 ROZAMIENTO CINÉTICO: la fuerza de rozamiento cinético se escribe \\(f_{rc}\\) (f minúscula, subíndice rc).
 ÓPTICA — convenciones del curso:
   NOTACIÓN COMÚN (espejos y lentes): X = posición del objeto; X' = posición de la imagen; A = aumento lateral. Eje positivo hacia la IZQUIERDA.
-  ESPEJOS: ecuación de Gauss \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +). Aumento: \\(A = -\\frac{X'}{X}\\) (con signo menos). Centro de curvatura: \\(X_{c} = 2f\\). Radio: \\(R = |X_{c}|\\).
+  ESPEJOS: ecuación de Descartes \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +). Aumento: \\(A = -\\frac{X'}{X}\\) (con signo menos). Centro de curvatura: \\(X_{c} = 2f\\). Radio: \\(R = |X_{c}|\\).
   LENTES: ecuación de Gauss \\(\\frac{1}{X'} - \\frac{1}{X} = \\frac{1}{f}\\) (signo −). Aumento: \\(A = \\frac{X'}{X}\\) (sin signo menos). Las lentes NO tienen Xc ni R. NUNCA usar la ecuación del fabricante de lentes.
 LaTeX inline: \\( ... \\) — LaTeX display: \\[ ... \\]
 

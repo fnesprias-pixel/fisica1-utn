@@ -82,7 +82,7 @@ REGLAS OBLIGATORIAS DEL CURSO:
    - Posición del objeto: X | Posición de la imagen: X' (X prima).
    - Aumento lateral: A (convención del curso).
    ESPEJOS:
-   - Ecuación de Gauss: \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +).
+   - Ecuación de Descartes: \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +).
    - Aumento lateral: \\(A = -\\frac{X'}{X}\\) (con signo menos).
    - Centro de curvatura: Xc = 2·f | Radio de curvatura: R = |Xc|.
    LENTES:

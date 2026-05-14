@@ -75,23 +75,23 @@ Deno.serve(async (req: Request) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No autorizado" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "No autorizado: falta header" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: { user } } = await supabase.auth.getUser(token);
     if (!user) {
-      return new Response(JSON.stringify({ error: "No autorizado" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "No autorizado: sesión inválida" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { data: perfil } = await supabase.from("usuarios").select("rol").eq("id", user.id).single();
     if (perfil?.rol !== "docente") {
       return new Response(JSON.stringify({ error: "Solo disponible para docentes" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 

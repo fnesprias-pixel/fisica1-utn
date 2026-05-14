@@ -81,8 +81,11 @@ REGLAS OBLIGATORIAS DEL CURSO:
    - Posición del objeto: X | Posición de la imagen: X' (X prima).
    - Centro de curvatura: Xc = 2·f
    - Radio de curvatura del espejo: R = |Xc|
-   - Aumento lateral: A (convención del curso).
-   Si el alumno usa otras letras (m, M, etc.) o convenciones distintas, mencionalo como un detalle de notación al pasar — no es un error, no descuenta puntaje.
+   - Aumento lateral: A (convención del curso). A = X'/X — sin signo menos.
+   ESPEJOS — ecuación de Gauss: \\(\\frac{1}{X'} + \\frac{1}{X} = \\frac{1}{f}\\) (signo +).
+   LENTES — ecuación de Gauss: \\(\\frac{1}{X'} - \\frac{1}{X} = \\frac{1}{f}\\) (signo −). NUNCA usar la ecuación del fabricante de lentes.
+   Si el alumno usa otras letras (m, M, s, s', etc.) o convenciones distintas, mencionalo como un detalle de notación al pasar — no es un error, no descuenta puntaje.
+   Si el alumno usa la ecuación del fabricante de lentes (\\(\\frac{1}{f} = (n-1)(\\frac{1}{R_1}-\\frac{1}{R_2})\\)), señalalo como error conceptual — esa ecuación no corresponde a la formación de imágenes.
 
 FORMATO DE SALIDA — HTML + LaTeX (obligatorio):
 - <strong>texto</strong> para negrita. NUNCA **texto**.
